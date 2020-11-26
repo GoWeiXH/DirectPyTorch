@@ -82,7 +82,6 @@ class Trainer:
             'acc': (lambda x: x, (train_loader,)),
             'val_acc': (lambda x: x, (val_loader,))
         }
-
         for m in metrics:
             if m not in metric_func.keys():
                 raise ValueError("Arg 'metrics' is invalid: {}".format(metrics))
