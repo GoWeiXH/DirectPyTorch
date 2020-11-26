@@ -12,15 +12,15 @@ import torch.nn as nn
 
 class Activation(nn.Module):
 
-    def __init__(self, func_name, param=None):
+    def __init__(self, func_name, param=None, **options):
         super(Activation, self).__init__()
         self.func_name = func_name
         self.param = param
-        self.activation = self.get_func()
+        self.activation = self.get_func(**options)
 
-    def get_func(self):
+    def get_func(self, **options):
         if self.func_name == 'relu':
-            func = nn.ReLU()
+            func = nn.ReLU(**options)
         elif self.func_name == 'lrelu':
             func = nn.LeakyReLU(self.param) if self.param else nn.LeakyReLU()
         elif self.func_name == 'sigmoid':

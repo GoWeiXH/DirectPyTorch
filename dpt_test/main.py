@@ -58,7 +58,7 @@ train_loader = DataLoader(train_set, batch_size=2, shuffle=False)
 # 创建 模型
 gen = Generator()
 # 创建 优化器
-opt = torch.optim.SGD(params=gen.parameters(), lr=1e-1, momentum=0.9)
+opt = torch.optim.SGD(params=gen.parameters(), lr=1e-5, momentum=0.9)
 # 创建 损失函数
 loss = torch.nn.MSELoss()
 
@@ -70,3 +70,5 @@ best_saving = BestSaving('save_path', monitor='val_loss', check_freq='epoch')
 # 开始训练
 trainer.train(train_loader, train_loader, epochs=10, val_freq=1,
               metrics=['loss', 'val_loss'], callbacks=[best_saving])
+
+print()

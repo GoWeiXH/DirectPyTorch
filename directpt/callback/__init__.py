@@ -7,7 +7,8 @@
 @description: 
 """
 
-from directpt.callback.callback import BestSaving
-from directpt.callback.callback import EarlyStopping
+from .best_saving import BestSaving
+from .early_stopping import EarlyStopping
+
 
 __all__ = ['BestSaving', 'EarlyStopping']

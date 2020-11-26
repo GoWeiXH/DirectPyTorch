@@ -24,9 +24,6 @@ class Trainer:
         self.loss_func = loss
         self.optimizer = optimizer
 
-        self.logs = {'loss': [], 'val_loss': [],
-                     'acc': [], 'val_acc': []}
-
         self.main_device, self.device, self.is_parallel = self.set_train_device(device)
 
     def set_train_device(self, device) -> (str, str, bool):
@@ -61,6 +58,7 @@ class Trainer:
 
             output = self.model(batch_x)
             step_loss = self.loss_func(output, batch_y)
+            step_loss_list.append(step_loss.item())
 
             if is_train:
                 self.optimizer.zero_grad()
@@ -75,6 +73,8 @@ class Trainer:
     def train(self, train_loader: DataLoader, val_loader: DataLoader,
               metrics=('loss',), epochs: int = 1,
               val_freq=1, callbacks=None):
+
+        logs = {'loss': [], 'val_loss': [], 'acc': [], 'val_acc': []}
 
         metric_func = {
             'loss': (self.calculation, (train_loader, True)),
@@ -97,10 +97,11 @@ class Trainer:
                 func = metric_func[metric][0]
                 args = metric_func[metric][1]
                 metric_res = func(*args)
-                self.logs[metric].append(metric_res)
+                logs[metric].append(metric_res)
 
-            if 'best_saving' in callbacks:
-                callbacks['best_saving'].save_best(self.model, self.logs)
-            elif 'early_stopping' in callbacks:
-                if callbacks['early_stopping'].early_stop(self.logs):
-                    break
+            if callbacks:
+                if 'best_saving' in callbacks:
+                    callbacks['best_saving'].save_best(self.model, logs)
+                elif 'early_stopping' in callbacks:
+                    if callbacks['early_stopping'].early_stop(logs):
+                        break
