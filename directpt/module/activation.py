@@ -11,6 +11,17 @@ import torch.nn as nn
 
 
 class Activation(nn.Module):
+    """
+    激活函数类
+
+    Args:
+        func_name: 激活函数名称，当前支持：relu、leaky_relu、sigmoid、softmax
+        param: 激活函数中包含的可调整参数
+
+    Examples:
+        >>> act = Activation('lrelu', 0.2)
+
+    """
 
     def __init__(self, func_name, param=None, **options):
         super(Activation, self).__init__()

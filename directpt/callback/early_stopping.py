@@ -7,11 +7,21 @@
 @description: 
 """
 
-import torch
 from .backens import _best
 
 
 class EarlyStopping:
+
+    """
+    早停机制
+
+    Args:
+        monitor: 早停机制的监测项目，支持 loss, val_loss, acc, val_acc
+        min_delta: 最小差值，小于此值时增加等待次数
+        patience: 允许等待次数，大于此值退出训练
+        verbose: 是否显示详细信息
+
+    """
 
     def __init__(self, monitor='val_loss', min_delta=0, patience=0, verbose=0):
         self.monitor = monitor

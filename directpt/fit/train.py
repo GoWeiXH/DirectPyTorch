@@ -17,6 +17,9 @@ from torch.utils.data.dataloader import DataLoader
 
 
 class Trainer:
+    """
+
+    """
 
     def __init__(self, model: Module, optimizer: Optimizer,
                  loss: FunctionType, device=None):

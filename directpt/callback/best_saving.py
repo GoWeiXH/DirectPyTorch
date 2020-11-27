@@ -7,13 +7,28 @@
 @description: 
 """
 
+from typing import Union
+
 import torch
 from .backens import _best
 
 
 class BestSaving:
+    """
+    保存最优模型
 
-    def __init__(self, save_path, monitor='val_loss', verbose=0, check_freq='epoch'):
+    Args:
+        save_path: 模型保存路径
+        monitor: 保存模型的监测项目，支持 loss, val_loss, acc, val_acc
+        check_freq: 检查频率,
+                    值'epoch'表示频率为每个 epoch,
+                    值为 int 表示 epoch 数目
+        verbose: 是否显示详细信息
+
+    """
+
+    def __init__(self, save_path: str, monitor: str = 'val_loss',
+                 verbose: int = 0, check_freq: Union[str, int] = 'epoch'):
         self.save_path = save_path
         self.monitor = monitor
         self.verbose = verbose
