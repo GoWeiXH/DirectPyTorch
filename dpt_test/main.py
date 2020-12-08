@@ -1,12 +1,3 @@
-"""
-@version: V1.0
-@author: weizhenhao
-@mail: weizhenhao@bjgoodwill.com
-@file: new_test.py
-@time: 2020/11/25 14:00
-@description: 
-"""
-
 import os
 import sys
 
@@ -14,6 +5,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data.dataset import TensorDataset
+
 
 cur_path = os.path.abspath(__file__)
 for d in range(3):
@@ -64,7 +56,7 @@ y_n = torch.zeros(5000, 1).float()
 y = torch.cat((y_p, y_n))
 
 train_set = TensorDataset(x, y)
-train_loader = DataLoader(train_set, batch_size=20, shuffle=False)
+train_loader = DataLoader(train_set, batch_size=200, shuffle=False)
 
 # ------ 模型 ------
 # 创建 模型
@@ -81,7 +73,7 @@ trainer = fit.Trainer(gen, opt, acc, metrics, 'cpu')
 # 回调函数
 best_saving = BestSaving('save_path', monitor='val_loss', check_freq='epoch')
 # 开始训练
-trainer.train(train_loader, train_loader, epochs=10, val_freq=1,
-              metrics=['loss', 'val_loss', 'acc', 'val_acc'], callbacks=[best_saving])
+trainer.train(train_loader, train_loader, epochs=10, val_freq=2,
+              metrics=['val_loss', 'acc', 'val_acc'], callbacks=[best_saving])
 
 print()

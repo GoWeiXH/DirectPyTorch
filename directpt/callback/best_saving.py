@@ -1,12 +1,3 @@
-"""
-@version: V1.0
-@author: weizhenhao
-@mail: weizhenhao@bjgoodwill.com
-@file: best_saving.py
-@time: 2020/11/26 19:21
-@description: 
-"""
-
 from typing import Union
 
 import torch
@@ -53,20 +44,20 @@ class BestSaving:
 
     def best_save(self, model, logs):
 
-        cur_monitor_value = logs[self.monitor][-1]
-
-        if self._epoch_since_last_saving % self.check_freq == 0:
-            if 'loss' in self.monitor:
-                if cur_monitor_value < self.best:
-                    self.best = cur_monitor_value
-                    self._save_model(model, logs)
-            elif 'acc' in self.monitor:
-                if cur_monitor_value > self.best:
-                    self.best = cur_monitor_value
-                    self._save_model(model, logs)
-            else:
-                raise ValueError('Monitor must be selected from [acc, val_acc, loss, val_loss]')
-        self._epoch_since_last_saving += 1
+        if logs[self.monitor]:
+            cur_monitor_value = logs[self.monitor][-1]
+            if self._epoch_since_last_saving % self.check_freq == 0:
+                if 'loss' in self.monitor:
+                    if cur_monitor_value < self.best:
+                        self.best = cur_monitor_value
+                        self._save_model(model, logs)
+                elif 'acc' in self.monitor:
+                    if cur_monitor_value > self.best:
+                        self.best = cur_monitor_value
+                        self._save_model(model, logs)
+                else:
+                    raise ValueError('Monitor must be selected from [acc, val_acc, loss, val_loss]')
+            self._epoch_since_last_saving += 1
 
     def __str__(self):
         return 'best_saving'

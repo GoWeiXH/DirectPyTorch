@@ -1,37 +1,88 @@
-"""
-@version: V1.0
-@author: weizhenhao
-@mail: weizhenhao@bjgoodwill.com
-@file: metrics.py
-@time: 2020/11/27 17:54
-@description: 
-"""
-
 import torch
 import torch.nn as nn
 
 from ..functional import correct, mc_correct
 
 
-class Accuracy(nn.Module):
-    def __init__(self):
-        super(Accuracy, self).__init__()
+def accuracy(y_pre: torch.Tensor, y_true: torch.Tensor):
+    """
+    计算二分类测正确样本的数量
 
-    def forward(self, y_pre: torch.Tensor, y_true: torch.Tensor):
-        return correct(y_pre, y_true) / len(y_true)
+    Args:
+        y_pre: 预测结果
+        y_true: 真实标签结果
+    """
+
+    return correct(y_pre, y_true) / len(y_true)
 
 
-class MCAccuracy(nn.Module):
-    def __init__(self):
-        super(MCAccuracy, self).__init__()
+def mc_accuracy(y_pre: torch.Tensor, y_true: torch.Tensor):
+    """
+    计算多分类测正确样本的数量
 
-    def forward(self, y_pre: torch.Tensor, y_true: torch.Tensor):
-        y_true = torch.argmax(y_true, dim=1)
-        y_pre = torch.argmax(y_pre, dim=1)
-        return mc_correct(y_pre, y_true) / len(y_true)
+    Args:
+        y_pre: 预测结果
+        y_true: 真实标签结果
+    """
+
+    y_true = torch.argmax(y_true, dim=1)
+    y_pre = torch.argmax(y_pre, dim=1)
+    return mc_correct(y_pre, y_true) / len(y_true)
+
+
+def recall(y_pre: torch.Tensor, y_true: torch.Tensor):
+    """
+    计算分类召回值 (Recall)
+
+    Args:
+        y_pre: 预测结果
+        y_true: 真实标签结果
+    """
+    # todo
+
+
+def precision(y_pre: torch.Tensor, y_true: torch.Tensor):
+    """
+    计算分类精确度 (precision)
+    Args:
+        y_pre: 预测结果
+        y_true: 真实标签结果
+    """
+    # todo
+
+
+def f_beta_score(y_pre: torch.Tensor, y_true: torch.Tensor):
+    """
+    计算分类 F-Beta 值
+
+    Args:
+        y_pre: 预测结果
+        y_true: 真实标签结果
+    """
+    # todo
+
+
+def f1_score(y_pre: torch.Tensor, y_true: torch.Tensor):
+    """
+    计算分类 F1 值
+
+    Args:
+        y_pre: 预测结果
+        y_true: 真实标签结果
+    """
+    # todo
 
 
 class MacroCostLoss(nn.Module):
+
+    """
+    F1-Score 损失函数
+
+    Args:
+        label_weight: 类别标签权重
+        sample_weight: 样本标签权重
+
+    """
 
     def __init__(self, label_weight=None, sample_weight=None):
         super(MacroCostLoss, self).__init__()
@@ -51,7 +102,12 @@ class MacroCostLoss(nn.Module):
 
 class MultiLabelCCE(nn.Module):
     """
-    MultiLabelCategoricalCrossEntropy
+    多标签分类交叉熵
+    Multi-Label Category Cross Entropy
+
+    Args:
+        label_weight: 类别标签权重
+        sample_weight: 样本标签权重
     """
 
     def __init__(self, label_weight=None, sample_weight=None):

@@ -1,12 +1,3 @@
-"""
-@version: V1.0
-@author: weizhenhao
-@mail: weizhenhao@bjgoodwill.com
-@file: activation.py
-@time: 2020/11/25 15:06
-@description: 
-"""
-
 import torch.nn as nn
 
 

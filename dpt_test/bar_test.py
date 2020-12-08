@@ -1,17 +1,8 @@
-"""
-@version: V1.0
-@author: weizhenhao
-@mail: weizhenhao@bjgoodwill.com
-@file: bar_test.py
-@time: 2020/12/7 15:31
-@description: 
-"""
-
 import time
 
 total_step = 20
 
-for step in range(1, total_step+1):
+for step in range(1, total_step + 1):
     past = int(step / total_step * 29)
     bar = '=' * past + '>' + '.' * (29 - past)
 

@@ -1,16 +1,8 @@
-"""
-@version: V1.0
-@author: weizhenhao
-@mail: weizhenhao@bjgoodwill.com
-@file: __init__.py.py
-@time: 2020/11/25 13:43
-@description: 
-"""
-
+from .metrics import *
 from .linear import Linear
 from .activation import Activation
-from .metrics import MacroCostLoss, MultiLabelCCE, MCAccuracy, Accuracy
 
 
 __all__ = ['Linear', 'Activation',
-           'MacroCostLoss', 'MultiLabelCCE', 'MCAccuracy', 'Accuracy']
+           'MacroCostLoss', 'MultiLabelCCE', 'mc_accuracy', 'accuracy',
+           'recall', 'precision', 'f_beta_score', 'f1_score', ]

@@ -1,12 +1,3 @@
-"""
-@version: V1.0
-@author: weizhenhao
-@mail: weizhenhao@bjgoodwill.com
-@file: earlystop.py
-@time: 2020/11/26 19:21
-@description: 
-"""
-
 from .backens import _worst
 
 
@@ -28,7 +19,7 @@ class EarlyStopping:
         self.patience = patience
         self.min_delta = abs(min_delta)
         self.wait = 0
-        self.best = _best(self.monitor)
+        self.best = _worst(self.monitor)
         self.verbose = verbose
 
     def early_stop(self, logs):

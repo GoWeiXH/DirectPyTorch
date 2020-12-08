@@ -1,12 +1,3 @@
-"""
-@version: V1.0
-@author: weizhenhao
-@mail: weizhenhao@bjgoodwill.com
-@file: linear.py
-@time: 2020/11/25 13:49
-@description: 
-"""
-
 from typing import Union
 
 import torch
