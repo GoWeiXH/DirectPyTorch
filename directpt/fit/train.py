@@ -127,6 +127,9 @@ class Trainer:
         for e in range(1, epochs + 1):
             print('Epoch {}/{}'.format(e, epochs))
             epoch_start = time.time()
+
+            # todo val_freq
+
             for metric in metrics:
                 func = metric_func[metric][0]
                 args = metric_func[metric][1]
