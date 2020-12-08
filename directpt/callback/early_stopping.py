@@ -7,7 +7,7 @@
 @description: 
 """
 
-from .backens import _best
+from .backens import _worst
 
 
 class EarlyStopping:

@@ -10,10 +10,30 @@
 import torch
 import torch.nn as nn
 
+from ..functional import correct, mc_correct
+
+
+class Accuracy(nn.Module):
+    def __init__(self):
+        super(Accuracy, self).__init__()
+
+    def forward(self, y_pre: torch.Tensor, y_true: torch.Tensor):
+        return correct(y_pre, y_true) / len(y_true)
+
+
+class MCAccuracy(nn.Module):
+    def __init__(self):
+        super(MCAccuracy, self).__init__()
+
+    def forward(self, y_pre: torch.Tensor, y_true: torch.Tensor):
+        y_true = torch.argmax(y_true, dim=1)
+        y_pre = torch.argmax(y_pre, dim=1)
+        return mc_correct(y_pre, y_true) / len(y_true)
+
 
 class MacroCostLoss(nn.Module):
 
-    def __init__(self, label_weight=None, sample_weight=None, reduce=None, reduction: str = 'mean'):
+    def __init__(self, label_weight=None, sample_weight=None):
         super(MacroCostLoss, self).__init__()
         self.label_weight = label_weight
         self.sample_weight = sample_weight
@@ -34,13 +54,12 @@ class MultiLabelCCE(nn.Module):
     MultiLabelCategoricalCrossEntropy
     """
 
-    def __init__(self, label_weight=None, sample_weight=None, reduce=None, reduction: str = 'mean'):
+    def __init__(self, label_weight=None, sample_weight=None):
         super(MultiLabelCCE, self).__init__()
         self.label_weight = label_weight
         self.sample_weight = sample_weight
 
     def forward(self, y_pre, y_true):
-
         # todo label_weight, sample_weight
 
         y_pre = (1 - 2 * y_true) * y_pre

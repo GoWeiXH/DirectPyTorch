@@ -9,7 +9,8 @@
 
 from .linear import Linear
 from .activation import Activation
-from .metrics import MacroCostLoss, MultiLabelCCE
+from .metrics import MacroCostLoss, MultiLabelCCE, MCAccuracy, Accuracy
 
 
-__all__ = ['Linear', 'Activation', 'MacroCostLoss', 'MultiLabelCCE']
+__all__ = ['Linear', 'Activation',
+           'MacroCostLoss', 'MultiLabelCCE', 'MCAccuracy', 'Accuracy']

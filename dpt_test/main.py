@@ -21,16 +21,19 @@ for d in range(3):
 sys.path.append(cur_path)
 
 from directpt import fit
-from directpt.callback import BestSaving
 import directpt.module as me
+from directpt.functional import correct
+from directpt.callback import BestSaving
 
-# y_pre = torch.randn(100, 10, requires_grad=True)
-# y_pre[:, 1:3] = 1
+
+# y_true = torch.tensor([[1, 0, 0], [1, 0, 0], [1, 0, 0],
+#                        [0, 1, 0], [0, 1, 0], [0, 0, 1]])
 #
-# y_true = torch.zeros(100, 10)
-# y_true[:, 0:3] = 1
+# y_pre = torch.tensor([[1, 0, 0], [1, 0, 0], [0, 1, 0],
+#                       [0, 1, 0], [0, 1, 0], [0, 0, 1]])
 #
-# loss = y_pre * y_true
+# accuracy = me.MCAccuracy()
+# acc = accuracy(y_pre, y_true)
 # print()
 
 
@@ -42,8 +45,8 @@ class Generator(nn.Module):
         super(Generator, self).__init__()
         self.gen = nn.Sequential(
             nn.Linear(256, 128),
-            me.Linear(128, 10, activation_func=l_relu, activation_param={'negative_slope': 0.2})
-            # me.Linear(128, 10, activation='sigmoid', activation_param={'inplace': True})
+            # me.Linear(128, 10, activation_func=l_relu, activation_param={'negative_slope': 0.2})
+            me.Linear(128, 1, activation='sigmoid', activation_param={'inplace': True})
         )
 
     def forward(self, x):
@@ -52,26 +55,33 @@ class Generator(nn.Module):
 
 
 # ------ 数据 ------
-x = torch.randn(10, 256).float()
-y = torch.randn(10, 10).float()
+x_p = torch.ones(5000, 256).float()
+x_n = torch.zeros(5000, 256).float()
+x = torch.cat((x_p, x_n))
+
+y_p = torch.ones(5000, 1).float()
+y_n = torch.zeros(5000, 1).float()
+y = torch.cat((y_p, y_n))
+
 train_set = TensorDataset(x, y)
-train_loader = DataLoader(train_set, batch_size=2, shuffle=False)
+train_loader = DataLoader(train_set, batch_size=20, shuffle=False)
 
 # ------ 模型 ------
 # 创建 模型
 gen = Generator()
 # 创建 优化器
-opt = torch.optim.SGD(params=gen.parameters(), lr=1e-5, momentum=0.9)
+opt = torch.optim.SGD(params=gen.parameters(), lr=1e-2, momentum=0.9)
 # 创建 损失函数
 metrics = torch.nn.MSELoss()
+acc = correct
 
 # ------ 框架训练 ------
 # 创建训练器
-trainer = fit.Trainer(gen, opt, metrics, 'cpu')
+trainer = fit.Trainer(gen, opt, acc, metrics, 'cpu')
 # 回调函数
 best_saving = BestSaving('save_path', monitor='val_loss', check_freq='epoch')
 # 开始训练
 trainer.train(train_loader, train_loader, epochs=10, val_freq=1,
-              metrics=['loss', 'val_loss'], callbacks=[best_saving])
+              metrics=['loss', 'val_loss', 'acc', 'val_acc'], callbacks=[best_saving])
 
 print()

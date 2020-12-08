@@ -10,7 +10,7 @@
 from typing import Union
 
 import torch
-from .backens import _best
+from .backens import _worst
 
 
 class BestSaving:
@@ -32,7 +32,7 @@ class BestSaving:
         self.save_path = save_path
         self.monitor = monitor
         self.verbose = verbose
-        self.best = _best(self.monitor)
+        self.best = _worst(self.monitor)
         self._epoch_since_last_saving = 0
 
         if check_freq == 'epoch':
@@ -45,13 +45,13 @@ class BestSaving:
     def _save_model(self, model, logs):
         torch.save({
             'model_state_dict': model.state_dict(),
-            'train_logs': logs
+            'model_fit_logs': logs
         }, self.save_path)
 
-    def save_best(self, model, logs):
+        if self.verbose:
+            print('Best model is saved to {}'.format(self.save_path))
 
-        # todo freq
-        # todo verbose
+    def best_save(self, model, logs):
 
         cur_monitor_value = logs[self.monitor][-1]
 
@@ -65,7 +65,7 @@ class BestSaving:
                     self.best = cur_monitor_value
                     self._save_model(model, logs)
             else:
-                ...
+                raise ValueError('Monitor must be selected from [acc, val_acc, loss, val_loss]')
         self._epoch_since_last_saving += 1
 
     def __str__(self):
