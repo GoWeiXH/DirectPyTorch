@@ -1,6 +1,7 @@
 from typing import Union
 
 import torch
+from ..exception import *
 from .backens import _worst
 
 
@@ -15,6 +16,10 @@ class BestSaving:
                     值'epoch'表示频率为每个 epoch,
                     值为 int 表示 epoch 数目
         verbose: 是否显示详细信息
+
+    Examples:
+
+        >>> best_saving = BestSaving('model_save_path', 'val_loss', verbose=1, check_freq=2)
 
     """
 
@@ -56,7 +61,7 @@ class BestSaving:
                         self.best = cur_monitor_value
                         self._save_model(model, logs)
                 else:
-                    raise ValueError('Monitor must be selected from [acc, val_acc, loss, val_loss]')
+                    raise MonitorError(self.monitor)
             self._epoch_since_last_saving += 1
 
     def __str__(self):

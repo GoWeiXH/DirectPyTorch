@@ -6,7 +6,6 @@ import torch.nn as nn
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data.dataset import TensorDataset
 
-
 cur_path = os.path.abspath(__file__)
 for d in range(3):
     cur_path = os.path.dirname(cur_path)
@@ -14,16 +13,19 @@ sys.path.append(cur_path)
 
 from directpt import fit
 import directpt.module as me
-from directpt.functional import correct
 from directpt.callback import BestSaving
 
 
-# y_true = torch.tensor([[1, 0, 0], [1, 0, 0], [1, 0, 0],
-#                        [0, 1, 0], [0, 1, 0], [0, 0, 1]])
+# y_pre = torch.tensor([1, 1, 1, 0, 0, 0])
+# y_true = torch.tensor([1, 1, 1, 1, 1, 0])
+
+# y_pre = torch.tensor([[1, 0, 0, 0], [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1]])
+# y_true = torch.tensor([[1, 0, 0, 0], [0, 1, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1]])
 #
-# y_pre = torch.tensor([[1, 0, 0], [1, 0, 0], [0, 1, 0],
-#                       [0, 1, 0], [0, 1, 0], [0, 0, 1]])
-#
+# method = me.Recall(multi_class=True)
+# res = method(y_pre, y_true)
+# print()
+
 # accuracy = me.MCAccuracy()
 # acc = accuracy(y_pre, y_true)
 # print()
@@ -65,11 +67,10 @@ gen = Generator()
 opt = torch.optim.SGD(params=gen.parameters(), lr=1e-2, momentum=0.9)
 # 创建 损失函数
 metrics = torch.nn.MSELoss()
-acc = correct
 
 # ------ 框架训练 ------
 # 创建训练器
-trainer = fit.Trainer(gen, opt, acc, metrics, 'cpu')
+trainer = fit.Trainer(gen, opt, metrics, 'cpu')
 # 回调函数
 best_saving = BestSaving('save_path', monitor='val_loss', check_freq='epoch')
 # 开始训练

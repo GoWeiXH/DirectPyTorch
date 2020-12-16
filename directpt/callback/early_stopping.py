@@ -1,3 +1,4 @@
+from ..exception import *
 from .backens import _worst
 
 
@@ -12,9 +13,13 @@ class EarlyStopping:
         patience: 允许等待次数，大于此值退出训练
         verbose: 是否显示详细信息
 
+    Examples:
+
+        >>> early_stopping = EarlyStopping(monitor='val_acc', min_delta=1e-5, patience=50, verbose=1)
+
     """
 
-    def __init__(self, monitor='val_loss', min_delta=0, patience=0, verbose=0):
+    def __init__(self, monitor='val_loss', min_delta: float = 0, patience=10, verbose=0):
         self.monitor = monitor
         self.patience = patience
         self.min_delta = abs(min_delta)
@@ -23,8 +28,6 @@ class EarlyStopping:
         self.verbose = verbose
 
     def early_stop(self, logs):
-
-        # todo verbose
 
         cur_monitor_value = logs[self.monitor][-1]
         delta = cur_monitor_value - self.best
@@ -42,7 +45,10 @@ class EarlyStopping:
             else:
                 self.wait += 1
         else:
-            ...
+            raise MonitorError(self.monitor)
+
+        if self.verbose:
+            print('Training Early Stop - {}: {}'.format(self.monitor, self.best))
 
         return self.wait > self.patience
 

@@ -1,54 +1,73 @@
 import torch
 import torch.nn as nn
 
-from ..functional import correct, mc_correct
+from ..functional import confusion_matrix, mc_confusion_matrix
 
 
-def accuracy(y_pre: torch.Tensor, y_true: torch.Tensor):
+class Correct(nn.Module):
+
+    def __init__(self, threshold=0.5):
+        super(Correct, self).__init__()
+
+        self.threshold = threshold
+
+    def forward(self, y_pre: torch.Tensor, y_true: torch.Tensor):
+        y_pre = torch.as_tensor(y_pre > self.threshold, dtype=torch.int)
+        return torch.as_tensor((y_pre == y_true), dtype=torch.int).sum().item()
+
+
+class Accuracy(nn.Module):
     """
-    计算二分类测正确样本的数量
-
-    Args:
-        y_pre: 预测结果
-        y_true: 真实标签结果
-    """
-
-    return correct(y_pre, y_true) / len(y_true)
-
-
-def mc_accuracy(y_pre: torch.Tensor, y_true: torch.Tensor):
-    """
-    计算多分类测正确样本的数量
-
-    Args:
-        y_pre: 预测结果
-        y_true: 真实标签结果
+    计算 二/多分类 准确率
     """
 
-    y_true = torch.argmax(y_true, dim=1)
-    y_pre = torch.argmax(y_pre, dim=1)
-    return mc_correct(y_pre, y_true) / len(y_true)
+    def __init__(self, threshold=0.5, multi_class=False):
+        super(Accuracy, self).__init__()
+
+        self.threshold = threshold
+
+        self.correct = Correct()
+
+        if multi_class:
+            self.accuracy_method = self.multi_acc
+        else:
+            self.accuracy_method = self.binary_acc
+
+    def forward(self, y_pre: torch.Tensor, y_true: torch.Tensor):
+        return self.accuracy_method(y_pre, y_true)
+
+    def binary_acc(self, y_pre: torch.Tensor, y_true: torch.Tensor):
+        correct = self.correct(y_pre, y_true)
+        return correct / len(y_pre)
+
+    def multi_acc(self, y_pre: torch.Tensor, y_true: torch.Tensor):
+        y_pre, y_true = torch.argmax(y_pre, dim=1), torch.argmax(y_true, dim=1)
+        correct = self.correct(y_pre, y_true)
+        return correct / len(y_pre)
 
 
-def recall(y_pre: torch.Tensor, y_true: torch.Tensor):
-    """
-    计算分类召回值 (Recall)
+class Recall(nn.Module):
 
-    Args:
-        y_pre: 预测结果
-        y_true: 真实标签结果
-    """
-    # todo
+    def __init__(self, threshold=0.5, multi_class=False):
+        super(Recall, self).__init__()
 
+        self.threshold = threshold
 
-def precision(y_pre: torch.Tensor, y_true: torch.Tensor):
-    """
-    计算分类精确度 (precision)
-    Args:
-        y_pre: 预测结果
-        y_true: 真实标签结果
-    """
-    # todo
+        if multi_class:
+            self.recall_method = self.multi_recall
+        else:
+            self.recall_method = self.binary_recall
+
+    def forward(self, y_pre: torch.Tensor, y_true: torch.Tensor):
+        return self.recall_method(y_pre, y_true)
+
+    def binary_recall(self, y_pre: torch.Tensor, y_true: torch.Tensor):
+        y_pre = torch.as_tensor(y_pre > self.threshold, dtype=torch.int)
+        tp, fn, fp, tn = confusion_matrix(y_pre, y_true)
+        return tp / (tp + fn)
+
+    def multi_recall(self, y_pre: torch.Tensor, y_true: torch.Tensor):
+        ...
 
 
 def f_beta_score(y_pre: torch.Tensor, y_true: torch.Tensor):
@@ -74,7 +93,6 @@ def f1_score(y_pre: torch.Tensor, y_true: torch.Tensor):
 
 
 class MacroCostLoss(nn.Module):
-
     """
     F1-Score 损失函数
 

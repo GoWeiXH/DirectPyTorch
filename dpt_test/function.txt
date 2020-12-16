@@ -6,3 +6,10 @@
 实现 网络结构概要
 实现 通过稀疏矩阵训练
 实现 多种编码方法
+实现 机器学习 LR、Bayes
+实现 深度学习 FNN、CNN、RNN、LSTM、GRU
+实现 Bi-LSTM、Seq2Seq、Transformer、
+实现 GAN、Siamese-Network
+实现 GGNN、GCNN
+实现 Embedding、Wrod2Vector、BERT
+实现 Deep-FM、CF

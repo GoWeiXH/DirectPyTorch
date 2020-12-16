@@ -7,6 +7,7 @@ from torch.optim import Optimizer
 from torch.utils.data.dataloader import DataLoader
 
 from .backens import print_train_log
+from ..module.metrics import Correct
 
 
 class Trainer:
@@ -19,14 +20,15 @@ class Trainer:
         acc: 准确度
         loss: 损失函数
         device: 运行硬件设备
+
     """
 
     def __init__(self, model: Module, optimizer: Optimizer,
-                 acc: nn.Module, loss: nn.Module, device=None):
+                 loss: nn.Module, pre_threshold=0.5, device=None):
         self.model = model
-        self.acc_func = acc
         self.loss_func = loss
         self.optimizer = optimizer
+        self.acc_func = Correct(threshold=pre_threshold)
 
         self.main_device, self.device, self.is_parallel = self.set_train_device(device)
 
@@ -112,6 +114,8 @@ class Trainer:
     def train(self, train_loader: DataLoader, val_loader: DataLoader,
               metrics: list = None, epochs: int = 1,
               val_freq=1, callbacks: list = None):
+
+        # todo print train params
 
         metrics = [] if not metrics else metrics
         for m in metrics:
