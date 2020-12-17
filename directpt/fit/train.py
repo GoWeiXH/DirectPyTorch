@@ -6,7 +6,7 @@ from torch.nn import Module
 from torch.optim import Optimizer
 from torch.utils.data.dataloader import DataLoader
 
-from .backens import print_train_log
+from .backens import Printer
 from ..module.metrics import Correct
 
 
@@ -17,14 +17,13 @@ class Trainer:
     Args:
         model: 模型
         optimizer: 优化器
-        acc: 准确度
         loss: 损失函数
         device: 运行硬件设备
 
     """
 
-    def __init__(self, model: Module, optimizer: Optimizer,
-                 loss: nn.Module, pre_threshold=0.5, device=None):
+    def __init__(self, model: Module, optimizer: Optimizer, loss: nn.Module,
+                 pre_threshold: float = 0.5, device: str = 'cpu'):
         self.model = model
         self.loss_func = loss
         self.optimizer = optimizer
@@ -33,10 +32,10 @@ class Trainer:
         self.main_device, self.device, self.is_parallel = self.set_train_device(device)
 
         self.metric_func_lib = {
-            'loss': self.train_loss_steps,
+            'loss': self.train_loss_step,
             'val_loss': self.test_loss_steps,
-            'acc': self.acc_steps,
-            'val_acc': self.acc_steps
+            'acc': self.train_acc_step,
+            'val_acc': self.test_acc_steps
         }
 
     def set_train_device(self, device: str) -> (str, str, bool):
@@ -64,41 +63,21 @@ class Trainer:
         device = 'cpu' if main_device == 'cpu' else 'gpu'
         return main_device, device, is_parallel
 
-    def acc_steps(self, data_loader: DataLoader):
-        sample_num, correct_num = 0, 0
-        for step, (batch_x, batch_y) in enumerate(data_loader, start=1):
-            batch_x, batch_y = batch_x.to(self.main_device), batch_y.to(self.main_device)
-            step_correct = self.acc_func(self.model(batch_x), batch_y)
+    def train_loss_step(self, batch_x: torch.Tensor, batch_y: torch.Tensor) -> float:
+        output = self.model(batch_x)
+        step_loss = self.loss_func(output, batch_y)
 
-            correct_num += step_correct
-            sample_num += len(batch_y)
+        self.optimizer.zero_grad()
+        step_loss.backward()
+        self.optimizer.step()
 
-        mean_step_acc = correct_num / sample_num
-        return mean_step_acc
+        return step_loss.item()
 
-    def train_loss_steps(self, data_loader: DataLoader):
-        total_step = len(data_loader)
-        step_loss_list = []
-        for step, (batch_x, batch_y) in enumerate(data_loader, start=1):
-            batch_x, batch_y = batch_x.to(self.main_device), batch_y.to(self.main_device)
-
-            output = self.model(batch_x)
-            step_loss = self.loss_func(output, batch_y)
-            step_loss_list.append(step_loss.item())
-
-            self.optimizer.zero_grad()
-            step_loss.backward()
-            self.optimizer.step()
-
-            past = int(step / total_step * 29)
-            bar = '=' * past + '>' + '.' * (29 - past)
-            pad_len = ' ' * (len(str(total_step)) - len(str(step))) + str(step)
-            print('\r{}/{} [{}]'.format(pad_len, total_step, bar), end='', flush=True)
-
-        total_step, bar = len(data_loader), '=' * 30
-        print('\r{}/{} [{}]'.format(total_step, total_step, bar), end='', flush=True)
-        mean_step_loss = torch.mean(torch.tensor(step_loss_list)).item()
-        return mean_step_loss
+    def train_acc_step(self, batch_x: torch.Tensor, batch_y: torch.Tensor) -> float:
+        batch_x, batch_y = batch_x.to(self.main_device), batch_y.to(self.main_device)
+        step_correct = self.acc_func(self.model(batch_x), batch_y)
+        step_acc = step_correct / len(batch_y)
+        return step_acc
 
     def test_loss_steps(self, data_loader: DataLoader):
         step_loss_list = []
@@ -111,18 +90,37 @@ class Trainer:
         mean_step_loss = torch.mean(torch.tensor(step_loss_list))
         return mean_step_loss.item()
 
+    def test_acc_steps(self, data_loader: DataLoader):
+        sample_num, correct_num = 0, 0
+        for step, (batch_x, batch_y) in enumerate(data_loader, start=1):
+            batch_x, batch_y = batch_x.to(self.main_device), batch_y.to(self.main_device)
+            step_correct = self.acc_func(self.model(batch_x), batch_y)
+
+            correct_num += step_correct
+            sample_num += len(batch_y)
+
+        mean_step_acc = correct_num / sample_num
+        return mean_step_acc
+
     def train(self, train_loader: DataLoader, val_loader: DataLoader,
               metrics: list = None, epochs: int = 1,
               val_freq=1, callbacks: list = None):
 
+        # 初始化日志打印
+        printer = Printer(epochs, len(train_loader), val_freq)
+
         # todo print train params
 
+        # 验证评价方法是否合法
         metrics = [] if not metrics else metrics
         for m in metrics:
             if m not in self.metric_func_lib.keys():
                 raise ValueError("Arg 'metrics' is invalid: {}".format(list(self.metric_func_lib.keys())))
 
+        # 根据指定参数设置回调函数
         callbacks = {str(cs): cs for cs in callbacks} if callbacks else []
+
+        # 将回调函数使用的 监控方法(monitor) 添加至 评价方法(metrics)
         callbacks_func = {}
         for k, v in callbacks.items():
             callbacks_func[k] = v
@@ -130,29 +128,56 @@ class Trainer:
             if monitor not in metrics:
                 metrics.append(monitor)
 
-        metric_func = {}
+        # 获取 评价方法metrics 中的方法名称对应的计算方法
+        metric_func, metric_val_func = {}, {}
         for m in metrics:
             if 'val' in m:
-                metric_func[m] = (self.metric_func_lib[m], val_loader)
+                metric_val_func[m] = self.metric_func_lib[m]
             else:
-                metric_func[m] = (self.metric_func_lib[m], train_loader)
+                metric_func[m] = self.metric_func_lib[m]
 
-        train_log, logs = [], {item: [] for item in metrics}
+        # 开始训练
+        logs = {item: [] for item in self.metric_func_lib.keys()}
         for e in range(1, epochs + 1):
-            print('Epoch {}/{}'.format(e, epochs))
+
             epoch_start = time.time()
+            printer.epoch_start_log(e)
 
-            train_loss = self.train_loss_steps(train_loader)
-            train_log.append(train_loss)
+            step_loss_his, step_acc_his = [], []
+            for step, (batch_x, batch_y) in enumerate(train_loader, start=1):
+                batch_x, batch_y = batch_x.to(self.main_device), batch_y.to(self.main_device)
 
-            for metric in metrics:
-                if not ('val' in metric and e % val_freq != 0):
-                    func = metric_func[metric][0]
-                    arg = metric_func[metric][1]
-                    metric_res = func(arg)
+                # 训练 loss
+                step_loss = self.train_loss_step(batch_x, batch_y)
+                step_loss_his.append(step_loss)
+
+                # 训练 acc
+                step_acc = None
+                if 'acc' in metric_func:
+                    step_acc = self.train_acc_step(batch_x, batch_y)
+                    step_acc_his.append(step_acc)
+
+                # 打印 step 训练日志
+                printer.step_log(step, step_loss, step_acc)
+
+            epoch_loss = sum(step_loss_his) / len(step_loss_his)
+            logs['loss'].append(epoch_loss)
+
+            epoch_acc = None
+            if 'acc' in metric_func:
+                epoch_acc = sum(step_acc_his) / len(step_acc_his)
+                logs['acc'].append(epoch_acc)
+
+            # 打印 epoch 训练日志
+            val_flag = e % val_freq == 0
+            printer.epoch_end_log(epoch_start, epoch_loss, epoch_acc, val_flag)
+
+            if val_flag:
+                for metric, val_func in metric_val_func.items():
+                    metric_res = val_func(val_loader)
                     logs[metric].append(metric_res)
 
-            print_train_log(logs, train_loss, epoch_start, e, val_freq)
+                printer.add_val_log(logs)
 
             if callbacks:
                 if 'best_saving' in callbacks:
@@ -161,5 +186,4 @@ class Trainer:
                     if callbacks['early_stopping'].early_stop(logs):
                         break
 
-        logs['loss'] = train_log
         return logs

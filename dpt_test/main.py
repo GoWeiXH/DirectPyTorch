@@ -70,7 +70,7 @@ metrics = torch.nn.MSELoss()
 
 # ------ 框架训练 ------
 # 创建训练器
-trainer = fit.Trainer(gen, opt, metrics, 'cpu')
+trainer = fit.Trainer(gen, opt, metrics)
 # 回调函数
 best_saving = BestSaving('save_path', monitor='val_loss', check_freq='epoch')
 # 开始训练
