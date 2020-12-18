@@ -1,3 +1,4 @@
+import os
 from typing import Union
 
 import torch
@@ -19,7 +20,7 @@ class BestSaving:
 
     Examples:
 
-        >>> best_saving = BestSaving('model_save_path', 'val_loss', verbose=1, check_freq=2)
+        >>> best_saving = BestSaving('model_save_path.pt', 'val_loss', verbose=1, check_freq=2)
 
     """
 

@@ -1,5 +1,7 @@
 import torch.nn as nn
 
+from ..exception import ActivationError
+
 
 class Activation(nn.Module):
     """
@@ -30,7 +32,7 @@ class Activation(nn.Module):
         elif self.func_name == 'softmax':
             func = nn.Softmax(self.param) if self.param else nn.Softmax()
         else:
-            func = None
+            raise ActivationError(self.func_name)
         return func
 
     def forward(self, input_tensor):

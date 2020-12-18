@@ -11,9 +11,10 @@ for d in range(3):
     cur_path = os.path.dirname(cur_path)
 sys.path.append(cur_path)
 
-from directpt import fit
 import directpt.module as me
+from directpt.direct import Direct
 from directpt.callback import BestSaving
+from directpt.data import train_test_split
 
 
 # y_pre = torch.tensor([1, 1, 1, 0, 0, 0])
@@ -31,9 +32,6 @@ from directpt.callback import BestSaving
 # print()
 
 
-l_relu = torch.nn.LeakyReLU()
-
-
 class Generator(nn.Module):
     def __init__(self):
         super(Generator, self).__init__()
@@ -48,33 +46,28 @@ class Generator(nn.Module):
         return x
 
 
-# ------ 数据 ------
-x_p = torch.ones(5000, 256).float()
-x_n = torch.zeros(5000, 256).float()
-x = torch.cat((x_p, x_n))
+if __name__ == '__main__':
+    # ------ 数据 ------
+    x_p = torch.ones(5000, 256).float()
+    x_n = torch.zeros(5000, 256).float()
+    x_data = torch.cat((x_p, x_n))
 
-y_p = torch.ones(5000, 1).float()
-y_n = torch.zeros(5000, 1).float()
-y = torch.cat((y_p, y_n))
+    y_p = torch.ones(5000, 1).float()
+    y_n = torch.zeros(5000, 1).float()
+    y_label = torch.cat((y_p, y_n))
 
-train_set = TensorDataset(x, y)
-train_loader = DataLoader(train_set, batch_size=200, shuffle=False)
+    # ------ 模型 ------
+    # 创建 模型
+    gen = Generator()
+    # 创建 优化器
+    opt = torch.optim.SGD(params=gen.parameters(), lr=1e-2, momentum=0.9)
+    # 创建 损失函数
+    loss = torch.nn.MSELoss()
+    # 回调函数
+    best_saving = BestSaving('best_model/save_path.pt', monitor='val_loss', check_freq='epoch')
 
-# ------ 模型 ------
-# 创建 模型
-gen = Generator()
-# 创建 优化器
-opt = torch.optim.SGD(params=gen.parameters(), lr=1e-2, momentum=0.9)
-# 创建 损失函数
-metrics = torch.nn.MSELoss()
-
-# ------ 框架训练 ------
-# 创建训练器
-trainer = fit.Trainer(gen, opt, metrics)
-# 回调函数
-best_saving = BestSaving('save_path', monitor='val_loss', check_freq='epoch')
-# 开始训练
-trainer.train(train_loader, train_loader, epochs=10, val_freq=2,
-              metrics=['val_loss', 'acc', 'val_acc'], callbacks=[best_saving])
-
-print()
+    direct = Direct()
+    direct.compile(gen, loss, opt, pre_threshold=0.5)
+    direct.fit(x_data, y_label, metrics=['val_acc'],
+               epochs=20, batch_size=200,
+               callbacks=[best_saving])

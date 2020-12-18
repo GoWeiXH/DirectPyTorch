@@ -6,8 +6,9 @@ from torch.nn import Module
 from torch.optim import Optimizer
 from torch.utils.data.dataloader import DataLoader
 
-from .backens import Printer
+from ..utils import Printer
 from ..module.metrics import Correct
+from ..exception import MetricsError
 
 
 class Trainer:
@@ -102,23 +103,21 @@ class Trainer:
         mean_step_acc = correct_num / sample_num
         return mean_step_acc
 
-    def train(self, train_loader: DataLoader, val_loader: DataLoader,
+    def train(self, train_loader: DataLoader, test_loader: DataLoader,
               metrics: list = None, epochs: int = 1,
               val_freq=1, callbacks: list = None):
 
-        # 初始化日志打印
+        # 初始化日志打印类
         printer = Printer(epochs, len(train_loader), val_freq)
-
-        # todo print train params
 
         # 验证评价方法是否合法
         metrics = [] if not metrics else metrics
         for m in metrics:
             if m not in self.metric_func_lib.keys():
-                raise ValueError("Arg 'metrics' is invalid: {}".format(list(self.metric_func_lib.keys())))
+                raise MetricsError(m)
 
         # 根据指定参数设置回调函数
-        callbacks = {str(cs): cs for cs in callbacks} if callbacks else []
+        callbacks = {str(cs): cs for cs in callbacks} if callbacks else {}
 
         # 将回调函数使用的 监控方法(monitor) 添加至 评价方法(metrics)
         callbacks_func = {}
@@ -174,7 +173,7 @@ class Trainer:
 
             if val_flag:
                 for metric, val_func in metric_val_func.items():
-                    metric_res = val_func(val_loader)
+                    metric_res = val_func(test_loader)
                     logs[metric].append(metric_res)
 
                 printer.add_val_log(logs)
