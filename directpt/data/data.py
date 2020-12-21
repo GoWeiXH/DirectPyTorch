@@ -37,10 +37,10 @@ def train_test_split(x_data, y_label, test_size, batch_size,
 
     train_set = data.Subset(x_y_data_set, data_idx[:divide])
     test_set = data.Subset(x_y_data_set, data_idx[divide:])
-    train_loader = data.DataLoader(dataset=train_set, batch_size=batch_size,
-                                   shuffle=shuffle, num_workers=num_workers)
-    test_loader = data.DataLoader(dataset=test_set, batch_size=batch_size,
+    train_loader = to_data_loader(data_set=train_set, batch_size=batch_size,
                                   shuffle=shuffle, num_workers=num_workers)
+    test_loader = to_data_loader(data_set=test_set, batch_size=batch_size,
+                                 shuffle=shuffle, num_workers=num_workers)
 
     # 获取对应的源数据
     if source_data:
@@ -52,5 +52,9 @@ def train_test_split(x_data, y_label, test_size, batch_size,
     return train_loader, test_loader
 
 
-def to_data_loader(x, y, batch_size, shuffle, num_workers):
-    ...
+def to_data_loader(x=None, y=None, data_set=None, batch_size=1024, shuffle=False, num_workers=1):
+    if x is not None and y is not None:
+        if not data_set:
+            data_set = data.TensorDataset(x, y)
+    return data.DataLoader(dataset=data_set, batch_size=batch_size,
+                           shuffle=shuffle, num_workers=num_workers)

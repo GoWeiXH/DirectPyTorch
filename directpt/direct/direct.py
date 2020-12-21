@@ -17,13 +17,11 @@ class Direct:
         self.trainer = Trainer(self.network, optimizer, loss_func,
                                device=self.device, pre_threshold=pre_threshold)
 
-    def fit(self, x_data, y_label,
-            train_loader: data.DataLoader = None,
-            test_loader: data.DataLoader = None,
+    def fit(self, x_data=None, y_label=None,
             metrics: list = None,
             epochs: int = 1, batch_size=1, val_freq=1,
             test_size: float = 0.2,
-            test_x=None, test_y=None,
+            test_data: tuple = None, test_batch_size: int = None,
             callbacks: list = None,
             random_seed=None, shuffle=False, num_workers=1):
 
@@ -32,12 +30,21 @@ class Direct:
 
         # todo print train params
 
-        if test_x is None and test_y is None and test_size is not None:
-            if x_data is not None and y_label is not None:
+        if x_data is not None and y_label is not None:
+            if test_data is None:
                 train_loader, test_loader = train_test_split(
-                    x_data, y_label, test_size, batch_size, random_seed, shuffle, num_workers)
+                    x_data, y_label,
+                    test_size, batch_size,
+                    random_seed, shuffle,
+                    num_workers)
+            else:
+                train_set = data.TensorDataset(x_data, y_label)
+                test_set = data.TensorDataset(test_data[0], test_data[1])
+                train_loader = data.DataLoader(train_set, batch_size=batch_size,
+                                               shuffle=shuffle, num_workers=num_workers)
+                test_loader = data.DataLoader(test_set, batch_size=test_batch_size,
+                                              shuffle=shuffle, num_workers=num_workers)
         else:
-            # todo
-            ...
+            raise TypeError('NoneType: x_data and y_label is None')
 
         self.trainer.train(train_loader, test_loader, metrics, epochs, val_freq, callbacks)

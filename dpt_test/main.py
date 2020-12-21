@@ -3,8 +3,6 @@ import sys
 
 import torch
 import torch.nn as nn
-from torch.utils.data.dataloader import DataLoader
-from torch.utils.data.dataset import TensorDataset
 
 cur_path = os.path.abspath(__file__)
 for d in range(3):
@@ -13,8 +11,7 @@ sys.path.append(cur_path)
 
 import directpt.module as me
 from directpt.direct import Direct
-from directpt.callback import BestSaving
-from directpt.data import train_test_split
+from directpt.callbacks.callbacks import BestSaving
 
 
 # y_pre = torch.tensor([1, 1, 1, 0, 0, 0])
