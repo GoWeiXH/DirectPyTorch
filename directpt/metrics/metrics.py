@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from ..functional import confusion_matrix, mc_confusion_matrix
+from ..backend import confusion_matrix, mc_confusion_matrix
 
 
 class Correct(nn.Module):
@@ -70,26 +70,16 @@ class Recall(nn.Module):
         ...
 
 
-def f_beta_score(y_pre: torch.Tensor, y_true: torch.Tensor):
-    """
-    计算分类 F-Beta 值
-
-    Args:
-        y_pre: 预测结果
-        y_true: 真实标签结果
-    """
-    # todo
+class Precision(nn.Module):
+    ...
 
 
-def f1_score(y_pre: torch.Tensor, y_true: torch.Tensor):
-    """
-    计算分类 F1 值
+class FBetaScore(nn.Module):
+    ...
 
-    Args:
-        y_pre: 预测结果
-        y_true: 真实标签结果
-    """
-    # todo
+
+class F1Score(nn.Module):
+    ...
 
 
 class MacroCostLoss(nn.Module):

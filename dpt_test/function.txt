@@ -1,9 +1,9 @@
 实现 precision/recall/f1-score/f-beta-score
 实现 自动识别多分类还是二分类 ——> 决定 accuracy 方法的选用
-实现 验证validation
-实现 模型 model 整体的封装
-实现 数据集的划分/采样/交叉验证
-实现 网络结构概要
+--- 验证validation
+--- 模型 model 整体的封装
+--- 数据集的划分/采样/
+--- 网络结构概要
 实现 通过稀疏矩阵训练
 实现 多种编码方法
 实现 机器学习 LR、Bayes

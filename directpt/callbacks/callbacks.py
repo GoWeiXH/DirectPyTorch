@@ -2,7 +2,7 @@ from typing import Union
 
 import torch
 
-from ..exception import MonitorError
+from .._exception import MonitorError
 from ..backend import worst
 
 

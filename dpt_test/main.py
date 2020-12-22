@@ -9,7 +9,6 @@ for d in range(3):
     cur_path = os.path.dirname(cur_path)
 sys.path.append(cur_path)
 
-import directpt.module as me
 from directpt.direct import Direct
 from directpt.callbacks.callbacks import BestSaving
 
@@ -33,9 +32,10 @@ class Generator(nn.Module):
     def __init__(self):
         super(Generator, self).__init__()
         self.gen = nn.Sequential(
+            nn.BatchNorm1d(256),
             nn.Linear(256, 128),
-            # me.Linear(128, 10, activation_func=l_relu, activation_param={'negative_slope': 0.2})
-            me.Linear(128, 1, activation='sigmoid', activation_param={'inplace': True})
+            nn.Linear(128, 1),
+            nn.ReLU()
         )
 
     def forward(self, x):
@@ -64,7 +64,7 @@ if __name__ == '__main__':
     best_saving = BestSaving('best_model/save_path.pt', monitor='val_loss', check_freq='epoch')
 
     direct = Direct()
-    direct.compile(gen, loss, opt, pre_threshold=0.5)
-    direct.fit(x_data, y_label, metrics=['val_acc'],
-               epochs=20, batch_size=200,
+    direct.compile(gen, loss, opt, threshold=0.5)
+    direct.fit(x_data, y_label, metrics=['acc', 'val_acc', 'val_loss'],
+               epochs=20, batch_size=20,
                callbacks=[best_saving])
