@@ -104,12 +104,18 @@ class EarlyStopping:
                 self.wait = 0
             else:
                 self.wait += 1
+                if self.verbose:
+                    print('No improvement to best {}: {:.4} - [{}]'.format(
+                        self.monitor, self.best, self.wait))
         elif 'acc' in self.monitor:
             if delta > 0 and delta > self.min_delta:
                 self.best = cur_monitor_value
                 self.wait = 0
             else:
                 self.wait += 1
+                if self.verbose:
+                    print('No improvement to best {}: {:.4} - [{}]'.format(
+                        self.monitor, self.best, self.wait))
         else:
             raise MonitorError(self.monitor)
 

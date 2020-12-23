@@ -11,6 +11,7 @@ sys.path.append(cur_path)
 
 from directpt.direct import Direct
 from directpt.callbacks.callbacks import BestSaving
+from directpt.metrics import recall_precision_fscore, binary_accuracy, multi_class_accuracy
 
 
 # y_pre = torch.tensor([1, 1, 1, 0, 0, 0])
@@ -18,13 +19,13 @@ from directpt.callbacks.callbacks import BestSaving
 
 # y_pre = torch.tensor([[1, 0, 0, 0], [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1]])
 # y_true = torch.tensor([[1, 0, 0, 0], [0, 1, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1]])
-#
-# method = me.Recall(multi_class=True)
-# res = method(y_pre, y_true)
-# print()
 
-# accuracy = me.MCAccuracy()
-# acc = accuracy(y_pre, y_true)
+# y_pre = torch.tensor([[1, 1, 0, 0], [1, 1, 0, 0], [1, 1, 1, 0], [0, 0, 0, 1]])
+# y_true = torch.tensor([[0, 0, 1, 0], [1, 0, 0, 0], [0, 1, 1, 0], [0, 0, 1, 1]])
+
+
+# r, p, f = recall_precision_fscore(y_pre, y_true, multi=False)
+# acc = binary_accuracy(y_pre, y_true)
 # print()
 
 
@@ -32,10 +33,9 @@ class Generator(nn.Module):
     def __init__(self):
         super(Generator, self).__init__()
         self.gen = nn.Sequential(
-            nn.BatchNorm1d(256),
             nn.Linear(256, 128),
-            nn.Linear(128, 1),
-            nn.ReLU()
+            nn.Linear(128, 2),
+            nn.Softmax(dim=1)
         )
 
     def forward(self, x):
@@ -49,15 +49,18 @@ if __name__ == '__main__':
     x_n = torch.zeros(5000, 256).float()
     x_data = torch.cat((x_p, x_n))
 
-    y_p = torch.ones(5000, 1).float()
-    y_n = torch.zeros(5000, 1).float()
-    y_label = torch.cat((y_p, y_n))
+    y_1 = torch.tensor([0, 1]).repeat(5000, 1).float()
+    y_2 = torch.tensor([1, 0]).repeat(5000, 1).float()
+    y_label = torch.cat((y_1, y_2))
+    # y_p = torch.ones(5000, 1).float()
+    # y_n = torch.zeros(5000, 1).float()
+    # y_label = torch.cat((y_p, y_n))
 
     # ------ 模型 ------
     # 创建 模型
     gen = Generator()
     # 创建 优化器
-    opt = torch.optim.SGD(params=gen.parameters(), lr=1e-2, momentum=0.9)
+    opt = torch.optim.SGD(params=gen.parameters(), lr=1e-5, momentum=0.9)
     # 创建 损失函数
     loss = torch.nn.MSELoss()
     # 回调函数
@@ -66,5 +69,5 @@ if __name__ == '__main__':
     direct = Direct()
     direct.compile(gen, loss, opt, threshold=0.5)
     direct.fit(x_data, y_label, metrics=['acc', 'val_acc', 'val_loss'],
-               epochs=20, batch_size=20,
+               epochs=20, batch_size=50,
                callbacks=[best_saving])

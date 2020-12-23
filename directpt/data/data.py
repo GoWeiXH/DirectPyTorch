@@ -15,7 +15,7 @@ def transform_to_tensor(x):
 
 
 def train_test_split(x_data, y_label, test_size, batch_size,
-                     seed, shuffle, num_workers,
+                     seed=None, shuffle: bool = False, num_workers=1,
                      source_data=None):
     # 数据格式转换
     x_data = transform_to_tensor(x_data)
@@ -26,9 +26,10 @@ def train_test_split(x_data, y_label, test_size, batch_size,
     assert x_len == y_len, "X_data len and Y_label len is unequal (x: {}, y: {})".format(x_len, y_len)
 
     data_idx = list(range(x_len))
-    if shuffle or seed is not None:
-        # 生成样本乱序索引
+    if seed is not None:
         np.random.seed(seed)
+        shuffle = True
+    if shuffle:
         np.random.shuffle(data_idx)
 
     # 划分数据
@@ -54,7 +55,8 @@ def train_test_split(x_data, y_label, test_size, batch_size,
 
 def to_data_loader(x=None, y=None, data_set=None, batch_size=1024, shuffle=False, num_workers=1):
     if x is not None and y is not None:
-        if not data_set:
-            data_set = data.TensorDataset(x, y)
+        data_set = data.TensorDataset(x, y)
+    if not data_set:
+        raise TypeError('x, y or data_set should not be None.')
     return data.DataLoader(dataset=data_set, batch_size=batch_size,
                            shuffle=shuffle, num_workers=num_workers)

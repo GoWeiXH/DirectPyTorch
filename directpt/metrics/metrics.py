@@ -1,85 +1,64 @@
 import torch
 import torch.nn as nn
 
-from ..backend import confusion_matrix, mc_confusion_matrix
+from ..backend import fill_nan
 
 
-class Correct(nn.Module):
-
-    def __init__(self, threshold=0.5):
-        super(Correct, self).__init__()
-
-        self.threshold = threshold
-
-    def forward(self, y_pre: torch.Tensor, y_true: torch.Tensor):
-        y_pre = torch.as_tensor(y_pre > self.threshold, dtype=torch.int)
-        return torch.as_tensor((y_pre == y_true), dtype=torch.int).sum().item()
-
-
-class Accuracy(nn.Module):
-    """
-    计算 二/多分类 准确率
-    """
-
-    def __init__(self, threshold=0.5, multi_class=False):
-        super(Accuracy, self).__init__()
-
-        self.threshold = threshold
-
-        self.correct = Correct()
-
-        if multi_class:
-            self.accuracy_method = self.multi_acc
-        else:
-            self.accuracy_method = self.binary_acc
-
-    def forward(self, y_pre: torch.Tensor, y_true: torch.Tensor):
-        return self.accuracy_method(y_pre, y_true)
-
-    def binary_acc(self, y_pre: torch.Tensor, y_true: torch.Tensor):
-        correct = self.correct(y_pre, y_true)
-        return correct / len(y_pre)
-
-    def multi_acc(self, y_pre: torch.Tensor, y_true: torch.Tensor):
-        y_pre, y_true = torch.argmax(y_pre, dim=1), torch.argmax(y_true, dim=1)
-        correct = self.correct(y_pre, y_true)
-        return correct / len(y_pre)
+def confusion_matrix(y_pre: torch.Tensor, y_true: torch.Tensor,
+                     threshold, multi):
+    y_pre = torch.as_tensor(y_pre > threshold, dtype=torch.int)
+    dim = 1 if multi else 0
+    tp = torch.sum(y_pre * y_true, dim=dim)
+    fn = torch.sum((1 - y_pre) * y_true, dim=dim)
+    fp = torch.sum(y_pre * (1 - y_true), dim=dim)
+    tn = torch.sum((1 - y_pre) * (1 - y_true), dim=dim)
+    return tp, fn, fp, tn
 
 
-class Recall(nn.Module):
-
-    def __init__(self, threshold=0.5, multi_class=False):
-        super(Recall, self).__init__()
-
-        self.threshold = threshold
-
-        if multi_class:
-            self.recall_method = self.multi_recall
-        else:
-            self.recall_method = self.binary_recall
-
-    def forward(self, y_pre: torch.Tensor, y_true: torch.Tensor):
-        return self.recall_method(y_pre, y_true)
-
-    def binary_recall(self, y_pre: torch.Tensor, y_true: torch.Tensor):
-        y_pre = torch.as_tensor(y_pre > self.threshold, dtype=torch.int)
-        tp, fn, fp, tn = confusion_matrix(y_pre, y_true)
-        return tp / (tp + fn)
-
-    def multi_recall(self, y_pre: torch.Tensor, y_true: torch.Tensor):
-        ...
+def binary_correct(y_pre: torch.Tensor, y_true: torch.Tensor, threshold=0.5):
+    y_pre = torch.as_tensor(y_pre > threshold, dtype=torch.int)
+    same = torch.as_tensor(y_pre == y_true, dtype=torch.int)
+    return torch.sum(same)
 
 
-class Precision(nn.Module):
-    ...
+def multi_class_correct(y_pre: torch.Tensor, y_true: torch.Tensor, threshold=0.5):
+    y_pre, y_true = y_pre.argmax(dim=1), y_true.argmax(dim=1)
+    same = torch.as_tensor(y_pre == y_true, dtype=torch.int)
+    return torch.sum(same)
 
 
-class FBetaScore(nn.Module):
-    ...
+def binary_accuracy(y_pre: torch.Tensor, y_true: torch.Tensor, threshold=0.5):
+    tp, fn, fp, tn = confusion_matrix(y_pre, y_true, threshold, multi=False)
+    return (tp + tn) / (tp + fn + fp + tn)
 
 
-class F1Score(nn.Module):
-    ...
+def multi_class_accuracy(y_pre: torch.Tensor, y_true: torch.Tensor):
+    y_pre, y_true = torch.argmax(y_pre, dim=1), torch.argmax(y_true, dim=1)
+    res = multi_class_correct(y_pre, y_true)
+    return res / len(y_pre)
+
+
+def recall_precision_fscore(y_pre: torch.Tensor, y_true: torch.Tensor,
+                            multi=False,
+                            threshold=0.5, beta=1.0, zero_division=0):
+    if multi:
+        y_pre, y_true = y_pre.T, y_true.T
+
+    tp, fn, fp, _ = confusion_matrix(y_pre, y_true, threshold, multi)
+
+    recall = fill_nan(tp / (tp + fn), zero_division)
+    precision = fill_nan(tp / (tp + fp), zero_division)
+
+    beta2 = beta ** 2
+    f_score = (1 + beta2) * precision * recall / (beta2 * precision + recall)
+    f_score = fill_nan(f_score, zero_division)
+
+    if multi:
+        recall = torch.mean(recall)
+        precision = torch.mean(precision)
+        f_score = torch.mean(f_score)
+
+    return recall, precision, f_score
 
 
 class MacroCostLoss(nn.Module):

@@ -7,7 +7,7 @@ from torch.optim import Optimizer
 from torch.utils.data.dataloader import DataLoader
 
 from ..utils import LogPrinter
-from ..metrics import Correct
+from ..metrics import binary_correct, multi_class_correct
 from .._exception import MetricsError
 
 
@@ -29,8 +29,9 @@ class Trainer:
         self.main_device = main_device
         self.loss_func = loss
         self.optimizer = optimizer
-        self.correct = Correct(threshold=threshold)
+        self.threshold = threshold
 
+        self.correct = None
         self.metric_func_lib = {
             'loss': self.train_loss_step,
             'val_loss': self.test_loss_step,
@@ -55,20 +56,23 @@ class Trainer:
 
     def train_acc_step(self, batch_x: torch.Tensor, batch_y: torch.Tensor) -> float:
         batch_x, batch_y = batch_x.to(self.main_device), batch_y.to(self.main_device)
-        step_correct = self.correct(self.model(batch_x), batch_y)
+        step_correct = self.correct(self.model(batch_x), batch_y, threshold=self.threshold)
         step_acc = step_correct / len(batch_y)
         return step_acc
 
     def test_acc_step(self, batch_x: torch.Tensor, batch_y: torch.Tensor) -> float:
-        step_acc = self.correct(self.model(batch_x), batch_y)
+        step_acc = self.correct(self.model(batch_x), batch_y, threshold=self.threshold)
         return step_acc
 
     def train(self, train_loader: DataLoader, test_loader: DataLoader,
-              metrics: list = None, epochs: int = 1,
+              metrics: list = None, epochs: int = 1, multi: bool = False,
               val_freq=1, callbacks: list = None):
 
         # 初始化日志打印类
         printer = LogPrinter(epochs, len(train_loader), val_freq)
+
+        # 识别 多分类 / 二分类，对应不同计算准确率方法
+        self.correct = multi_class_correct if multi else binary_correct
 
         # 验证评价方法是否合法
         metrics = [] if not metrics else metrics
@@ -146,10 +150,11 @@ class Trainer:
                         steps_loss_list.append(self.test_loss_step(batch_x, batch_y))
 
                 val_acc = correct_num / test_data_len
-                val_loss = torch.mean(torch.tensor(steps_loss_list))
+                if steps_loss_list:
+                    val_loss = torch.mean(torch.tensor(steps_loss_list))
+                    logs['val_loss'].append(val_loss)
 
                 logs['val_acc'].append(val_acc)
-                logs['val_loss'].append(val_loss)
                 printer.add_val_log(logs)
 
             if callbacks:

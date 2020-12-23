@@ -50,7 +50,7 @@ class LogPrinter:
         bar = '=' * past + '>' + '.' * (29 - past)
         pad_len = ' ' * (len(str(total_step)) - len(str(step))) + str(step)
         msg = '\r{}/{} [{}] - loss: {:.4f}'.format(pad_len, total_step, bar, step_loss)
-        if step_acc:
+        if step_acc is not None:
             msg += ' - acc: {:.4f}'.format(step_acc)
         print(msg, end='', flush=True)
 
@@ -69,7 +69,7 @@ class LogPrinter:
             cost_time = f'{cost_time:.0f}s'
 
         msg = '\r{}/{} [{}] - ATA: {} - loss: {:.4f}'.format(total_step, total_step, '=' * 30, cost_time, epoch_loss)
-        if epoch_acc:
+        if epoch_acc is not None:
             msg += ' - acc: {:.4f}'.format(epoch_acc)
         if val:
             print(msg, end='', flush=True)

@@ -4,10 +4,10 @@ import torch
 import torch.nn as nn
 from torch.utils import data
 
-from ..fit.train import Trainer
+from ..fit import Trainer
 from ..utils import model_summary
-from ..data import train_test_split
 from .._exception import NoCompileError
+from ..data import train_test_split, transform_to_tensor
 
 
 class Direct:
@@ -20,6 +20,7 @@ class Direct:
         self.trainer = None
         self.loss_func = None
         self.optimizer = None
+        self.multi = False
 
     def compile(self, network, loss_func, optimizer, threshold: float = 0.5):
         self.network = network
@@ -54,6 +55,13 @@ class Direct:
         device = 'cpu' if main_device == 'cpu' else 'gpu'
         return main_device, device, is_parallel
 
+    def set_multi_flag(self, y_label):
+        y_label = transform_to_tensor(y_label)
+        if len(y_label.shape) == 1:
+            y_label = y_label.reshape(-1, 1)
+        if y_label.shape[1] > 1:
+            self.multi = True
+
     def fit(self, x_data=None, y_label=None,
             metrics: list = None,
             epochs: int = 1, batch_size=1, val_freq=1,
@@ -66,6 +74,8 @@ class Direct:
         if not self.trainer:
             raise NoCompileError()
 
+        self.set_multi_flag(y_label)
+
         if x_data is not None and y_label is not None:
             # 如果未指定测试数据，则以 test_size 划分测试数据
             if test_data is None:
@@ -73,7 +83,8 @@ class Direct:
                     x_data, y_label,
                     test_size, batch_size,
                     random_seed, shuffle,
-                    num_workers)
+                    num_workers
+                )
 
             # 如果指定测试数据，则无需划分
             else:
@@ -90,5 +101,5 @@ class Direct:
             model_summary(self.network, (x_data.shape[1],), self.device)
 
         self.trainer.train(train_loader, test_loader,
-                           metrics, epochs,
+                           metrics, epochs, self.multi,
                            val_freq, callbacks)
