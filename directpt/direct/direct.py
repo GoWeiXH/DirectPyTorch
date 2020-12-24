@@ -31,18 +31,15 @@ class Direct:
                                main_device=self.main_device, threshold=threshold)
 
     def set_train_device(self, device: str) -> (str, str, bool):
-        if device == 'gpu':
-            if torch.cuda.is_available():
-                main_device = 'cuda:0'
-            else:
-                print('GPU is not available, CPU is used by default')
-                main_device = 'cpu'
-        elif device.startswith('cuda'):
-            main_device = device
-        elif isinstance(device, list):
-            main_device = 'cuda:{}'.format(device[0])
-        else:
-            main_device = 'cpu'
+        main_device = 'cpu'
+        if torch.cuda.is_available():
+            if isinstance(device, str):
+                if device == 'gpu':
+                    main_device = 'cuda:0'
+                elif device.startswith('cuda'):
+                    main_device = device
+            elif isinstance(device, list):
+                main_device = 'cuda:{}'.format(device[0])
 
         is_parallel = False
         if isinstance(device, list):
@@ -56,13 +53,19 @@ class Direct:
         return main_device, device, is_parallel
 
     def set_multi_flag(self, y_label):
-        y_label = transform_to_tensor(y_label)
-        if len(y_label.shape) == 1:
-            y_label = y_label.reshape(-1, 1)
-        if y_label.shape[1] > 1:
-            self.multi = True
+        try:
+            y_label = transform_to_tensor(y_label)
+            if len(y_label.shape) == 1:
+                y_label = y_label.reshape(-1, 1)
+            if y_label.shape[1] > 1:
+                self.multi = True
+        except TypeError:
+            output_dim = list(self.network.parameters())[-1].shape[0]
+            if output_dim > 1:
+                self.multi = True
 
     def fit(self, x_data=None, y_label=None,
+            train_loader=None, test_loader=None,
             metrics: list = None,
             epochs: int = 1, batch_size=1, val_freq=1,
             test_size: float = 0.2,
@@ -74,7 +77,7 @@ class Direct:
         if not self.trainer:
             raise NoCompileError()
 
-        self.set_multi_flag(y_label)
+        # todo 网络、训练参数
 
         if x_data is not None and y_label is not None:
             # 如果未指定测试数据，则以 test_size 划分测试数据
@@ -94,12 +97,18 @@ class Direct:
                                                shuffle=shuffle, num_workers=num_workers)
                 test_loader = data.DataLoader(test_set, batch_size=test_batch_size,
                                               shuffle=shuffle, num_workers=num_workers)
+
+        elif train_loader is not None and test_loader is not None:
+            train_loader = train_loader
+            test_loader = test_loader
+
         else:
             raise TypeError('NoneType: x_data and y_label is None')
 
         if verbose:
             model_summary(self.network, (x_data.shape[1],), self.device)
 
+        self.set_multi_flag(y_label)
         self.trainer.train(train_loader, test_loader,
                            metrics, epochs, self.multi,
                            val_freq, callbacks)

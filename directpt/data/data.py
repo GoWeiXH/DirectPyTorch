@@ -11,7 +11,8 @@ def transform_to_tensor(x):
     elif isinstance(x, list):
         return torch.tensor(x)
     else:
-        raise TypeError("Data type is invalid, should be np.ndarray, torch.Tensor or list")
+        raise TypeError
+        # raise TypeError("Data type is invalid, should be np.ndarray, torch.Tensor or list")
 
 
 def train_test_split(x_data, y_label, test_size, batch_size,

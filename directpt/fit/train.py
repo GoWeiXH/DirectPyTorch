@@ -7,8 +7,8 @@ from torch.optim import Optimizer
 from torch.utils.data.dataloader import DataLoader
 
 from ..utils import LogPrinter
-from ..metrics import binary_correct, multi_class_correct
 from .._exception import MetricsError
+from .step_metrics import StepMetrics
 
 
 class Trainer:
@@ -30,14 +30,13 @@ class Trainer:
         self.loss_func = loss
         self.optimizer = optimizer
         self.threshold = threshold
+        self.metrics = list()
+        self.logs = {'loss': []}
+        self.multi = False
 
-        self.correct = None
-        self.metric_func_lib = {
-            'loss': self.train_loss_step,
-            'val_loss': self.test_loss_step,
-            'acc': self.train_acc_step,
-            'val_acc': self.test_acc_step
-        }
+        self.__step_metrics = None
+        self.__metric_func = dict()
+        self.__metric_val_func = dict()
 
     def train_loss_step(self, batch_x: torch.Tensor, batch_y: torch.Tensor) -> float:
         output = self.model(batch_x)
@@ -54,15 +53,27 @@ class Trainer:
         step_loss = self.loss_func(output, batch_y)
         return step_loss.item()
 
-    def train_acc_step(self, batch_x: torch.Tensor, batch_y: torch.Tensor) -> float:
-        batch_x, batch_y = batch_x.to(self.main_device), batch_y.to(self.main_device)
-        step_correct = self.correct(self.model(batch_x), batch_y, threshold=self.threshold)
-        step_acc = step_correct / len(batch_y)
-        return step_acc
+    def test(self, test_loader):
 
-    def test_acc_step(self, batch_x: torch.Tensor, batch_y: torch.Tensor) -> float:
-        step_acc = self.correct(self.model(batch_x), batch_y, threshold=self.threshold)
-        return step_acc
+        correct_num, test_data_len = 0, 0
+        steps_loss_list = []
+        for step, (batch_x, batch_y) in enumerate(test_loader, start=1):
+            batch_x, batch_y = batch_x.to(self.main_device), batch_y.to(self.main_device)
+
+            if 'val_loss' in self.__metric_val_func:
+                steps_loss_list.append(self.test_loss_step(batch_x, batch_y))
+
+            if 'val_acc' in self.__metric_val_func:
+                correct_num += self.__step_metrics.test_acc_step(self.model, batch_x, batch_y)
+                test_data_len += len(batch_y)
+
+        if 'val_loss' in self.__metric_val_func:
+            val_loss = torch.mean(torch.tensor(steps_loss_list))
+            self.logs['val_loss'].append(val_loss)
+
+        if 'val_acc' in self.__metric_val_func:
+            val_acc = correct_num / test_data_len
+            self.logs['val_acc'].append(val_acc)
 
     def train(self, train_loader: DataLoader, test_loader: DataLoader,
               metrics: list = None, epochs: int = 1, multi: bool = False,
@@ -71,13 +82,14 @@ class Trainer:
         # 初始化日志打印类
         printer = LogPrinter(epochs, len(train_loader), val_freq)
 
-        # 识别 多分类 / 二分类，对应不同计算准确率方法
-        self.correct = multi_class_correct if multi else binary_correct
+        # 初始化 metrics 计算类
+        self.__step_metrics = StepMetrics(multi, self.threshold)
+        metric_func_lib = self.__step_metrics.metric_func_lib
 
         # 验证评价方法是否合法
         metrics = [] if not metrics else metrics
         for m in metrics:
-            if m not in self.metric_func_lib.keys():
+            if m not in metric_func_lib:
                 raise MetricsError(m)
 
         # 根据指定参数设置回调函数
@@ -90,19 +102,19 @@ class Trainer:
             monitor = v.monitor
             if monitor not in metrics:
                 metrics.append(monitor)
+        self.metrics = metrics
 
         # 获取 评价方法metrics 中的方法名称对应的计算方法
-        metric_func, metric_val_func = {}, {}
-        for m in metrics:
+        for m in self.metrics:
             if 'val' in m:
-                metric_val_func[m] = self.metric_func_lib[m]
+                self.__metric_val_func[m] = metric_func_lib[m]
             else:
-                metric_func[m] = self.metric_func_lib[m]
+                self.__metric_func[m] = metric_func_lib[m]
 
         # 开始训练
-        logs = {item: [] for item in self.metric_func_lib.keys()}
+        for item in self.metrics:
+            self.logs[item] = []
         for e in range(1, epochs + 1):
-
             epoch_start = time.time()
             printer.epoch_start_log(e)
 
@@ -116,20 +128,20 @@ class Trainer:
 
                 # 训练 acc
                 step_acc = None
-                if 'acc' in metric_func:
-                    step_acc = self.train_acc_step(batch_x, batch_y)
+                if 'acc' in self.__metric_func:
+                    step_acc = self.__step_metrics.train_acc_step(self.model, batch_x, batch_y)
                     step_acc_his.append(step_acc)
 
                 # 打印 step 训练日志
                 printer.step_log(step, step_loss, step_acc)
 
             epoch_loss = sum(step_loss_his) / len(step_loss_his)
-            logs['loss'].append(epoch_loss)
+            self.logs['loss'].append(epoch_loss)
 
             epoch_acc = None
-            if 'acc' in metric_func:
+            if 'acc' in self.__metric_func:
                 epoch_acc = sum(step_acc_his) / len(step_acc_his)
-                logs['acc'].append(epoch_acc)
+                self.logs['acc'].append(epoch_acc)
 
             # 打印 epoch 训练日志
             val_flag = e % val_freq == 0
@@ -137,31 +149,14 @@ class Trainer:
 
             # 计算验证集结果
             if val_flag:
-                correct_num, test_data_len = 0, 0
-                steps_loss_list = []
-                for step, (batch_x, batch_y) in enumerate(test_loader, start=1):
-                    batch_x, batch_y = batch_x.to(self.main_device), batch_y.to(self.main_device)
-
-                    if 'val_acc' in metric_val_func:
-                        correct_num += self.test_acc_step(batch_x, batch_y)
-                        test_data_len += len(batch_y)
-
-                    if 'val_loss' in metric_val_func:
-                        steps_loss_list.append(self.test_loss_step(batch_x, batch_y))
-
-                val_acc = correct_num / test_data_len
-                if steps_loss_list:
-                    val_loss = torch.mean(torch.tensor(steps_loss_list))
-                    logs['val_loss'].append(val_loss)
-
-                logs['val_acc'].append(val_acc)
-                printer.add_val_log(logs)
+                self.test(test_loader)
+                printer.add_val_log(self.logs)
 
             if callbacks:
                 if 'best_saving' in callbacks:
-                    callbacks['best_saving'].best_save(self.model, logs)
+                    callbacks['best_saving'].best_save(self.model, self.logs)
                 elif 'early_stopping' in callbacks:
-                    if callbacks['early_stopping'].early_stop(logs):
+                    if callbacks['early_stopping'].early_stop(self.logs):
                         break
 
-        return logs
+        return self.logs
