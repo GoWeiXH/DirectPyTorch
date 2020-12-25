@@ -1,27 +1,27 @@
 
-CANDIDATE = "[acc, val_acc, loss, val_loss]"
-
 
 class MonitorError(Exception):
 
     def __init__(self, value):
         super(MonitorError, self).__init__()
         self.value = value
+        self.candidate = ['loss', 'val_loss', 'acc', 'val_acc']
 
     def __str__(self):
         return "Monitor '{}' is invalid, Monitor must be selected from {}".format(
-            self.value, CANDIDATE)
+            self.value, self.candidate)
 
 
 class MetricsError(Exception):
 
-    def __init__(self, value):
+    def __init__(self, value, candidate):
         super(MetricsError, self).__init__()
         self.value = value
+        self.candidate = candidate
 
     def __str__(self):
         return "Metrics '{}' is invalid, Metrics must be selected from {}".format(
-            self.value, CANDIDATE)
+            self.value, self.candidate)
 
 
 class NoCompileError(Exception):

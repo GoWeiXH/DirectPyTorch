@@ -12,7 +12,7 @@ def worst(monitor):
     elif monitor in ['acc', 'val_acc']:
         best = MIN
     else:
-        raise MonitorError(monitor)
+        raise MonitorError(monitor, ['loss', 'val_loss', 'acc', 'val_acc', 'val_recall'])
     return best
 
 

@@ -16,7 +16,7 @@ def transform_to_tensor(x):
 
 
 def train_test_split(x_data, y_label, test_size, batch_size,
-                     seed=None, shuffle: bool = False, num_workers=1,
+                     seed=None, shuffle: bool = True, num_workers=1,
                      source_data=None):
     # 数据格式转换
     x_data = transform_to_tensor(x_data)

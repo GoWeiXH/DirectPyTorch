@@ -1,7 +1,7 @@
-import torch
+from torch.tensor import Tensor
 
 from ..metrics import binary_correct, multi_class_correct
-from ..metrics import recall_precision_fscore
+from ..metrics import confusion_matrix, recall_precision_fscore
 
 
 class StepMetrics:
@@ -12,24 +12,37 @@ class StepMetrics:
         self.correct_func = multi_class_correct if multi else binary_correct
 
         self.metric_func_lib = {
-            'loss': None,
-            'val_loss': None,
             'acc': self.train_acc_step,
+            'loss': None,
+            'recall': self.train_recall_step,
+            'precision': self.train_precision_step,
             'val_acc': self.test_acc_step,
-            'val_recall': self.train_recall_step,
+            'val_loss': None,
+            'val_recall': self.test_recall_step,
+            'val_precision': self.test_precision_step
         }
 
-    def train_acc_step(self, model, batch_x: torch.Tensor, batch_y: torch.Tensor) -> float:
-        step_correct = self.correct_func(model(batch_x), batch_y, threshold=self.threshold)
+    def train_acc_step(self, y_pre: Tensor, batch_y: Tensor) -> Tensor:
+        step_correct = self.correct_func(y_pre, batch_y, threshold=self.threshold)
         step_acc = step_correct / len(batch_y)
         return step_acc
 
-    def test_acc_step(self, model, batch_x: torch.Tensor, batch_y: torch.Tensor) -> float:
-        step_acc = self.correct_func(model(batch_x), batch_y, threshold=self.threshold)
-        return step_acc
-
-    def train_recall_step(self, model, batch_x: torch.Tensor, batch_y: torch.Tensor,
-                          zero_division=0) -> float:
-        y_pre = model(batch_x)
-        recall, *_ = recall_precision_fscore(y_pre, batch_y, self.multi, self.threshold, zero_division=zero_division)
+    def train_recall_step(self, y_pre: Tensor, batch_y: Tensor) -> Tensor:
+        recall, *_ = recall_precision_fscore(y_pre, batch_y, self.multi, self.threshold)
         return recall
+
+    def train_precision_step(self, y_pre: Tensor, batch_y: Tensor) -> Tensor:
+        _, precision, _ = recall_precision_fscore(y_pre, batch_y, self.multi, self.threshold)
+        return precision
+
+    def test_acc_step(self, y_pre: Tensor, batch_y: Tensor) -> (Tensor, int):
+        step_acc = self.correct_func(y_pre, batch_y, threshold=self.threshold)
+        return step_acc, len(batch_y)
+
+    def test_recall_step(self, y_pre: Tensor, batch_y: Tensor) -> (Tensor, Tensor):
+        tp, fn, fp, tn = confusion_matrix(y_pre, batch_y, self.threshold, self.multi)
+        return tp, (tp + fn)
+
+    def test_precision_step(self, y_pre: Tensor, batch_y: Tensor) -> (Tensor, Tensor):
+        tp, fn, fp, tn = confusion_matrix(y_pre, batch_y, self.threshold, self.multi)
+        return tp, (tp + fp)

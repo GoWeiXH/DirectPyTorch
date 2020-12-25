@@ -1,11 +1,15 @@
 import torch
 import torch.nn as nn
+from torch.tensor import Tensor
 
 from ..backend import fill_nan
 
 
-def confusion_matrix(y_pre: torch.Tensor, y_true: torch.Tensor,
-                     threshold, multi):
+def confusion_matrix(y_pre: Tensor, y_true: Tensor, threshold, multi) -> (Tensor, Tensor, Tensor, Tensor):
+
+    if multi:
+        y_pre, y_true = y_pre.T, y_true.T
+
     y_pre = torch.as_tensor(y_pre > threshold, dtype=torch.int)
     dim = 1 if multi else 0
     tp = torch.sum(y_pre * y_true, dim=dim)
@@ -15,34 +19,31 @@ def confusion_matrix(y_pre: torch.Tensor, y_true: torch.Tensor,
     return tp, fn, fp, tn
 
 
-def binary_correct(y_pre: torch.Tensor, y_true: torch.Tensor, threshold=0.5):
+def binary_correct(y_pre: Tensor, y_true: Tensor, threshold=0.5) -> Tensor:
     y_pre = torch.as_tensor(y_pre > threshold, dtype=torch.int)
     same = torch.as_tensor(y_pre == y_true, dtype=torch.int)
     return torch.sum(same)
 
 
-def multi_class_correct(y_pre: torch.Tensor, y_true: torch.Tensor, threshold=0.5):
+def multi_class_correct(y_pre: Tensor, y_true: Tensor, threshold=0.5) -> Tensor:
     y_pre, y_true = y_pre.argmax(dim=1), y_true.argmax(dim=1)
     same = torch.as_tensor(y_pre == y_true, dtype=torch.int)
     return torch.sum(same)
 
 
-def binary_accuracy(y_pre: torch.Tensor, y_true: torch.Tensor, threshold=0.5):
+def binary_accuracy(y_pre: Tensor, y_true: Tensor, threshold=0.5) -> Tensor:
     tp, fn, fp, tn = confusion_matrix(y_pre, y_true, threshold, multi=False)
     return (tp + tn) / (tp + fn + fp + tn)
 
 
-def multi_class_accuracy(y_pre: torch.Tensor, y_true: torch.Tensor):
+def multi_class_accuracy(y_pre: Tensor, y_true: Tensor) -> Tensor:
     y_pre, y_true = torch.argmax(y_pre, dim=1), torch.argmax(y_true, dim=1)
     res = multi_class_correct(y_pre, y_true)
     return res / len(y_pre)
 
 
-def recall_precision_fscore(y_pre: torch.Tensor, y_true: torch.Tensor,
-                            multi=False,
-                            threshold=0.5, beta=1.0, zero_division=0):
-    if multi:
-        y_pre, y_true = y_pre.T, y_true.T
+def recall_precision_fscore(y_pre: Tensor, y_true: Tensor, multi=False,
+                            threshold=0.5, beta=1.0, zero_division=0) -> (Tensor, Tensor, Tensor):
 
     tp, fn, fp, _ = confusion_matrix(y_pre, y_true, threshold, multi)
 
@@ -76,7 +77,7 @@ class MacroCostLoss(nn.Module):
         self.label_weight = label_weight
         self.sample_weight = sample_weight
 
-    def forward(self, y_pre, y_true):
+    def forward(self, y_pre: Tensor, y_true: Tensor) -> Tensor:
         # todo label_weight, sample_weight
 
         tp = torch.sum(y_pre * y_true * self.label_weight, dim=1)
@@ -102,7 +103,7 @@ class MultiLabelCCE(nn.Module):
         self.label_weight = label_weight
         self.sample_weight = sample_weight
 
-    def forward(self, y_pre, y_true):
+    def forward(self, y_pre: Tensor, y_true: Tensor) -> Tensor:
         # todo label_weight, sample_weight
 
         y_pre = (1 - 2 * y_true) * y_pre

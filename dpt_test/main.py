@@ -34,8 +34,10 @@ class Generator(nn.Module):
         super(Generator, self).__init__()
         self.gen = nn.Sequential(
             nn.Linear(256, 128),
+            nn.ReLU(),
             nn.Linear(128, 2),
             nn.Softmax(dim=1)
+            # nn.Sigmoid()
         )
 
     def forward(self, x):
@@ -45,29 +47,30 @@ class Generator(nn.Module):
 
 if __name__ == '__main__':
     # ------ 数据 ------
-    x_p = torch.ones(5000, 256).float()
-    x_n = torch.zeros(5000, 256).float()
+    x_p = torch.ones(500, 256).float()
+    x_n = torch.zeros(500, 256).float()
     x_data = torch.cat((x_p, x_n))
 
-    y_1 = torch.tensor([0, 1]).repeat(5000, 1).float()
-    y_2 = torch.tensor([1, 0]).repeat(5000, 1).float()
+    y_1 = torch.tensor([0, 1]).repeat(500, 1).float()
+    y_2 = torch.tensor([1, 0]).repeat(500, 1).float()
     y_label = torch.cat((y_1, y_2))
-    # y_p = torch.ones(5000, 1).float()
-    # y_n = torch.zeros(5000, 1).float()
+    # y_p = torch.ones(500, 1).float()
+    # y_n = torch.zeros(500, 1).float()
     # y_label = torch.cat((y_p, y_n))
 
     # ------ 模型 ------
     # 创建 模型
     gen = Generator()
     # 创建 优化器
-    opt = torch.optim.SGD(params=gen.parameters(), lr=1e-5, momentum=0.9)
+    opt = torch.optim.SGD(params=gen.parameters(), lr=1e-4, momentum=0.9)
     # 创建 损失函数
-    loss = torch.nn.MSELoss()
+    # loss = torch.nn.MSELoss()
+    loss = torch.nn.BCELoss()
     # 回调函数
     best_saving = BestSaving('best_model/save_path.pt', monitor='val_loss', check_freq='epoch')
 
     direct = Direct()
     direct.compile(gen, loss, opt, threshold=0.5)
-    direct.fit(x_data, y_label, metrics=['acc', 'val_acc', 'val_loss'],
-               epochs=20, batch_size=50,
+    direct.fit(x_data, y_label, metrics=['acc'],
+               epochs=20, batch_size=10,
                callbacks=[best_saving])

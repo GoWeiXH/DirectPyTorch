@@ -1,10 +1,11 @@
 --- precision/recall/f-beta-score
 --- 自动识别多分类还是二分类 ——> 决定 accuracy 方法的选用
---- 验证validation
+--- 验证 validation
 --- 模型 model 整体的封装
 --- 数据集的划分/采样/
 --- 网络结构概要
-实现 训练中使用多种 metrics
+--- 训练中使用多种 metrics
+实现 训练使用 f-score 作为 metrics
 实现 通过稀疏矩阵训练
 实现 多种编码方法
 实现 机器学习 LR、Bayes

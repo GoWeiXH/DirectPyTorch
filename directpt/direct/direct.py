@@ -2,6 +2,7 @@ from typing import Union
 
 import torch
 import torch.nn as nn
+from torch.nn import Module
 from torch.utils import data
 
 from ..fit import Trainer
@@ -22,7 +23,7 @@ class Direct:
         self.optimizer = None
         self.multi = False
 
-    def compile(self, network, loss_func, optimizer, threshold: float = 0.5):
+    def compile(self, network: Module, loss_func, optimizer, threshold: float = 0.5):
         self.network = network
         self.loss_func = loss_func
         self.optimizer = optimizer
@@ -65,13 +66,14 @@ class Direct:
                 self.multi = True
 
     def fit(self, x_data=None, y_label=None,
-            train_loader=None, test_loader=None,
+            train_loader: data.DataLoader = None,
+            test_loader: data.DataLoader = None,
             metrics: list = None,
             epochs: int = 1, batch_size=1, val_freq=1,
             test_size: float = 0.2,
             test_data: tuple = None, test_batch_size: int = None,
             callbacks: list = None,
-            random_seed=None, shuffle=False, num_workers=1,
+            random_seed=None, shuffle=True, num_workers=1,
             verbose: bool = False):
 
         if not self.trainer:

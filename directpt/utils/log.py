@@ -6,6 +6,10 @@ import torch
 import torch.nn as nn
 
 
+TRAIN_METRICS = ['loss', 'acc', 'recall', 'precision']
+TEST_METRICS = ['val_loss', 'val_acc', 'val_recall', 'val_precision']
+
+
 class LogPrinter:
 
     def __init__(self, epochs, total_step, val_freq):
@@ -44,17 +48,18 @@ class LogPrinter:
 
         print('{} {}'.format(cost_time, msg))
 
-    def step_log(self, step: int, step_loss: float, step_acc: float):
+    def step_train_log(self, step: int, train_step_logs: dict):
         total_step = self.total_step
         past = int(step / total_step * 29)
         bar = '=' * past + '>' + '.' * (29 - past)
         pad_len = ' ' * (len(str(total_step)) - len(str(step))) + str(step)
-        msg = '\r{}/{} [{}] - loss: {:.4f}'.format(pad_len, total_step, bar, step_loss)
-        if step_acc is not None:
-            msg += ' - acc: {:.4f}'.format(step_acc)
+        msg = '\r{}/{} [{}]'.format(pad_len, total_step, bar)
+        for item in TRAIN_METRICS:
+            if item is not None and item in train_step_logs:
+                msg += ' - {}: {:.4f}'.format(item, train_step_logs[item][-1])
         print(msg, end='', flush=True)
 
-    def epoch_end_log(self, epoch_start: float, epoch_loss: float, epoch_acc: float, val=False):
+    def epoch_end_log(self, epoch_start: float, logs: dict, val):
         total_step = self.total_step
 
         cost_time = time.time() - epoch_start
@@ -68,22 +73,26 @@ class LogPrinter:
         else:
             cost_time = f'{cost_time:.0f}s'
 
-        msg = '\r{}/{} [{}] - ATA: {} - loss: {:.4f}'.format(total_step, total_step, '=' * 30, cost_time, epoch_loss)
-        if epoch_acc is not None:
-            msg += ' - acc: {:.4f}'.format(epoch_acc)
+        msg = '\r{}/{} [{}] - ATA: {} - loss: {:.4f}'.format(
+            total_step, total_step, '=' * 30, cost_time, logs['loss'][-1])
+
+        for item in TRAIN_METRICS:
+            if all((item is not None,
+                    item != 'loss',
+                    item in logs,
+                    'val' not in item)):
+                msg += ' - {}: {:.4f}'.format(item, logs[item][-1])
+
         if val:
             print(msg, end='', flush=True)
         else:
             print(msg)
 
     def add_val_log(self, logs):
-
-        val_loss, val_acc = logs.get('val_loss'), logs.get('val_acc')
         msg = ''
-        if val_loss:
-            msg += ' - val_loss: {:.4f}'.format(val_loss[-1])
-        if val_acc:
-            msg += ' - val_acc: {:.4f}'.format(val_acc[-1])
+        for item in TEST_METRICS:
+            if item in logs:
+                msg += ' - {}: {:.4f}'.format(item, logs[item][-1])
         print(msg)
 
 
