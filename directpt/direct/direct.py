@@ -114,3 +114,14 @@ class Direct:
         self.trainer.train(train_loader, test_loader,
                            metrics, epochs, self.multi,
                            val_freq, callbacks)
+
+    @staticmethod
+    def load_model(model: nn.Module, model_file_path: str, device: str) -> (nn.Module, dict):
+
+        model.to(device)
+
+        checkpoint = torch.load(model_file_path)
+        model.load_state_dict(checkpoint.pop('model_state_dict'))
+        model.eval()
+
+        return model, checkpoint

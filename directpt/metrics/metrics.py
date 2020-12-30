@@ -2,15 +2,14 @@ import torch
 import torch.nn as nn
 from torch.tensor import Tensor
 
-from ..backend import fill_nan
+from ..function import fill_nan
 
 
-def confusion_matrix(y_pre: Tensor, y_true: Tensor, threshold, multi) -> (Tensor, Tensor, Tensor, Tensor):
-
+def confusion_matrix(y_pre: Tensor, y_true: Tensor, threshold, multi, device='cpu') -> (Tensor, Tensor, Tensor, Tensor):
     if multi:
         y_pre, y_true = y_pre.T, y_true.T
 
-    y_pre = torch.as_tensor(y_pre > threshold, dtype=torch.int)
+    y_pre = torch.as_tensor(y_pre > threshold, dtype=torch.int).to(device)
     dim = 1 if multi else 0
     tp = torch.sum(y_pre * y_true, dim=dim)
     fn = torch.sum((1 - y_pre) * y_true, dim=dim)
@@ -19,33 +18,33 @@ def confusion_matrix(y_pre: Tensor, y_true: Tensor, threshold, multi) -> (Tensor
     return tp, fn, fp, tn
 
 
-def binary_correct(y_pre: Tensor, y_true: Tensor, threshold=0.5) -> Tensor:
-    y_pre = torch.as_tensor(y_pre > threshold, dtype=torch.int)
-    same = torch.as_tensor(y_pre == y_true, dtype=torch.int)
+def binary_correct(y_pre: Tensor, y_true: Tensor, threshold=0.5, device='cpu') -> Tensor:
+    y_pre = torch.as_tensor(y_pre > threshold, dtype=torch.int).to(device)
+    same = torch.as_tensor(y_pre == y_true, dtype=torch.int).to(device)
     return torch.sum(same)
 
 
-def multi_class_correct(y_pre: Tensor, y_true: Tensor, threshold=0.5) -> Tensor:
+def multi_class_correct(y_pre: Tensor, y_true: Tensor, threshold=0.5, device='cpu') -> Tensor:
     y_pre, y_true = y_pre.argmax(dim=1), y_true.argmax(dim=1)
-    same = torch.as_tensor(y_pre == y_true, dtype=torch.int)
+    same = torch.as_tensor(y_pre == y_true, dtype=torch.int).to(device)
     return torch.sum(same)
 
 
-def binary_accuracy(y_pre: Tensor, y_true: Tensor, threshold=0.5) -> Tensor:
-    tp, fn, fp, tn = confusion_matrix(y_pre, y_true, threshold, multi=False)
+def binary_accuracy(y_pre: Tensor, y_true: Tensor, threshold=0.5, device='cpu') -> Tensor:
+    tp, fn, fp, tn = confusion_matrix(y_pre, y_true, threshold, multi=False, device=device)
     return (tp + tn) / (tp + fn + fp + tn)
 
 
-def multi_class_accuracy(y_pre: Tensor, y_true: Tensor) -> Tensor:
+def multi_class_accuracy(y_pre: Tensor, y_true: Tensor, device='cpu') -> Tensor:
     y_pre, y_true = torch.argmax(y_pre, dim=1), torch.argmax(y_true, dim=1)
-    res = multi_class_correct(y_pre, y_true)
+    res = multi_class_correct(y_pre, y_true, device=device)
     return res / len(y_pre)
 
 
 def recall_precision_fscore(y_pre: Tensor, y_true: Tensor, multi=False,
-                            threshold=0.5, beta=1.0, zero_division=0) -> (Tensor, Tensor, Tensor):
-
-    tp, fn, fp, _ = confusion_matrix(y_pre, y_true, threshold, multi)
+                            threshold=0.5, beta=1.0, zero_division=0,
+                            device='cpu') -> (Tensor, Tensor, Tensor):
+    tp, fn, fp, _ = confusion_matrix(y_pre, y_true, threshold, multi, device)
 
     recall = fill_nan(tp / (tp + fn), zero_division)
     precision = fill_nan(tp / (tp + fp), zero_division)

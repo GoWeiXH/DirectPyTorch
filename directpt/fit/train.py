@@ -7,7 +7,7 @@ from torch.tensor import Tensor
 from torch.optim import Optimizer
 from torch.utils.data.dataloader import DataLoader
 
-from ..backend import fill_nan
+from ..function import fill_nan
 from ..utils import LogPrinter
 from .._exception import MetricsError
 from .step_metrics import StepMetrics
@@ -128,7 +128,7 @@ class Trainer:
 
         # 初始化 metrics 计算类
         self.multi = multi
-        self.__step_metrics = StepMetrics(multi, self.threshold)
+        self.__step_metrics = StepMetrics(multi, self.threshold, self.main_device)
         metric_func_lib = self.__step_metrics.metric_func_lib
 
         # 根据指定参数设置回调函数
@@ -177,7 +177,7 @@ class Trainer:
             if callbacks:
                 if 'best_saving' in callbacks:
                     callbacks['best_saving'].best_save(self.model, self.logs)
-                elif 'early_stopping' in callbacks:
+                if 'early_stopping' in callbacks:
                     if callbacks['early_stopping'].early_stop(self.logs):
                         break
 

@@ -3,7 +3,7 @@ from typing import Union
 import torch
 
 from .._exception import MonitorError
-from ..backend import worst
+from ..function import worst
 
 
 class BestSaving:
@@ -85,7 +85,7 @@ class EarlyStopping:
 
     """
 
-    def __init__(self, monitor='val_loss', min_delta: float = 0, patience=10, verbose=0):
+    def __init__(self, monitor: str = 'val_loss', min_delta: float = 0, patience: int = 10, verbose: object = 0) -> object:
         self.monitor = monitor
         self.patience = patience
         self.min_delta = abs(min_delta)
@@ -120,7 +120,7 @@ class EarlyStopping:
             raise MonitorError(self.monitor)
 
         if self.verbose:
-            print('Training Early Stop - {}: {}'.format(self.monitor, self.best))
+            print('Early Stop - best - {}: {}'.format(self.monitor, self.best))
 
         return self.wait > self.patience
 

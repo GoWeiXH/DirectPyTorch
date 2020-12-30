@@ -10,7 +10,7 @@ for d in range(3):
 sys.path.append(cur_path)
 
 from directpt.direct import Direct
-from directpt.callbacks.callbacks import BestSaving
+from directpt.callbacks.callbacks import BestSaving, EarlyStopping
 from directpt.metrics import recall_precision_fscore, binary_accuracy, multi_class_accuracy
 
 
@@ -67,10 +67,11 @@ if __name__ == '__main__':
     # loss = torch.nn.MSELoss()
     loss = torch.nn.BCELoss()
     # 回调函数
-    best_saving = BestSaving('best_model/save_path.pt', monitor='val_loss', check_freq='epoch')
+    best_saving = BestSaving('best_model/save_path.pt', monitor='val_loss', verbose=True)
+    early_stop = EarlyStopping(monitor='val_loss', patience=100, verbose=True)
 
     direct = Direct()
     direct.compile(gen, loss, opt, threshold=0.5)
     direct.fit(x_data, y_label, metrics=['acc'],
                epochs=20, batch_size=10,
-               callbacks=[best_saving])
+               callbacks=[best_saving, early_stop])
